@@ -1,0 +1,2079 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Search every airline, hotel and rental car your credit card points can book.">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>html{color-scheme:light}body{margin:0;font-size:14px}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Award Trip Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: luxury travel magazine. Full-bleed rotating destination photography under a serif headline, a mosaic gallery that seeds the form, then a boarding-pass request form whose stub shows the destination. Owner: dark ops board + request stubs. */
+:root{
+  --bg:#f4f6f9; --paper:#ffffff; --ink:#0d1b2e; --muted:#5b6879; --line:#dde3eb;
+  --gold:#a87a2c; --gold-hi:#d9b46a; --gold-ink:#ffffff; --night:#0b1422;
+  --on-photo:#ffffff; --on-photo-dim:rgba(255,255,255,.78);
+  --map-land:#d3dde8; --map-line:#f4f6f9; --board:#0f141b; --flap:#1b2129; --flap-ink:#f3eee4; --flap-seam:#06080a;
+  --ok:#1d8752; --warn:#b06400; --new:#2b6cb0; --closed:#7a8797; --danger:#c43a2b;
+  --shadow:0 1px 2px rgba(13,27,46,.05), 0 24px 48px -24px rgba(13,27,46,.30);
+  --f-display:"Instrument Serif", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0a111b; --paper:#111b29; --ink:#eef2f7; --muted:#9eabbd; --line:#22314a;
+  --gold:#d9b46a; --gold-hi:#e8c987; --gold-ink:#1a1206; --night:#05090f;
+  --map-land:#1c2a3e; --map-line:#0a111b; --board:#080b10; --flap:#161b22; --flap-seam:#020304;
+  --ok:#4dcb8b; --warn:#f0a73a; --new:#7fb3ef; --closed:#8b98aa; --danger:#ff7a6b;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 28px 56px -24px rgba(0,0,0,.75); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a111b; --paper:#111b29; --ink:#eef2f7; --muted:#9eabbd; --line:#22314a;
+  --gold:#d9b46a; --gold-hi:#e8c987; --gold-ink:#1a1206; --night:#05090f;
+  --map-land:#1c2a3e; --map-line:#0a111b; --board:#080b10; --flap:#161b22; --flap-seam:#020304;
+  --ok:#4dcb8b; --warn:#f0a73a; --new:#7fb3ef; --closed:#8b98aa; --danger:#ff7a6b;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 28px 56px -24px rgba(0,0,0,.75); color-scheme:dark}
+
+.ph-cgn{background-image:url(img/cgn.jpg)}
+.ph-han{background-image:url(img/han.jpg)}
+.ph-pek{background-image:url(img/pek.jpg)}
+.ph-syd{background-image:url(img/syd.jpg)}
+.ph-mco{background-image:url(img/mco.jpg)}
+.ph-buf{background-image:url(img/buf.jpg)}
+.ph-jfk{background-image:url(img/jfk.jpg)}
+.ph{background-size:cover;background-position:center;background-color:var(--night)}
+.ph-mco{background-position:center 30%}
+.ph-jfk{background-position:center 35%}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.gut{padding-left:max(20px, env(safe-area-inset-left, 0px));padding-right:max(20px, env(safe-area-inset-right, 0px))}
+.inner{max-width:1180px;margin:0 auto;width:100%}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--gold)}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:clamp(40px,6vw,68px);line-height:.98}
+h2 em,h1 em{font-style:italic}
+h3{font-size:28px;line-height:1.05}
+
+/* top bar */
+.top{padding-block:18px;position:relative;z-index:5}
+body.on-hero .top{position:absolute;left:0;right:0;top:0;color:var(--on-photo)}
+.top .inner{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-size:26px;line-height:1;min-width:0}
+.mark{width:30px;height:30px;border-radius:50%;border:1.5px solid currentColor;display:grid;place-items:center;flex:none}
+.mark svg{width:15px;height:15px}
+.tabs{display:flex;gap:2px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:4px;color:var(--ink)}
+.tab{border:0;background:transparent;border-radius:999px;padding:7px 14px;font-size:14px;font-weight:600;cursor:pointer;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.clientnav{display:flex;gap:4px;flex-wrap:wrap}
+.clientnav a{color:inherit;text-decoration:none;font-weight:600;font-size:14px;border-radius:999px;padding:8px 14px;border:1px solid transparent}
+.clientnav a:hover{border-color:currentColor}
+.toplink{font-weight:600;font-size:14px;color:inherit;text-decoration:none;border:1px solid currentColor;border-radius:999px;padding:8px 16px;backdrop-filter:blur(6px);background:rgba(255,255,255,.08)}
+
+/* hero slideshow */
+.hero{position:relative;height:clamp(600px,92vh,880px);overflow:hidden;background:var(--night);color:var(--on-photo);isolation:isolate}
+.slide{position:absolute;inset:0;opacity:0;transition:opacity 1.6s ease;z-index:0}
+.slide.on{opacity:1;z-index:1}
+.slide .ph{position:absolute;inset:-2%;transform:scale(1.02)}
+@media (prefers-reduced-motion:no-preference){.slide.on .ph{animation:drift 9s ease-out forwards}@keyframes drift{from{transform:scale(1.02) translate3d(0,0,0)}to{transform:scale(1.13) translate3d(-1.5%,-1%,0)}}}
+.hero::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,rgba(5,10,18,.55) 0%,rgba(5,10,18,0) 26%,rgba(5,10,18,0) 42%,rgba(5,10,18,.78) 82%,rgba(5,10,18,.9) 100%),
+             linear-gradient(90deg,rgba(5,10,18,.5) 0%,rgba(5,10,18,0) 60%)}
+.hero-in{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;justify-content:flex-end;padding-block:110px 116px}
+@media (max-width:820px){.hero{height:auto;min-height:620px}.hero-in{position:relative;inset:auto;padding-block:120px 110px}.now span#nowLine{display:none}}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:30px;align-items:end}
+@media (max-width:820px){.hero-grid{grid-template-columns:minmax(0,1fr)}}
+.hero .eyebrow{color:var(--gold-hi)}
+h1{font-size:clamp(58px,10vw,138px);line-height:.88;margin-top:14px;text-shadow:0 2px 30px rgba(0,0,0,.25)}
+h1 em{color:var(--gold-hi)}
+.lede{font-size:clamp(17px,1.9vw,20px);color:var(--on-photo-dim);max-width:46ch;margin:20px 0 0}
+.ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.btn{display:inline-flex;align-items:center;gap:10px;font-weight:600;border-radius:999px;padding:14px 24px;cursor:pointer;border:1.5px solid var(--gold);background:var(--gold);color:var(--gold-ink);text-decoration:none;font-size:15.5px;letter-spacing:.01em}
+.hero .btn{background:var(--gold-hi);border-color:var(--gold-hi);color:#1a1206}
+.btn.light{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.7);color:#fff;backdrop-filter:blur(6px)}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--ink)}
+.btn.small{padding:8px 15px;font-size:14px}
+.btn.danger{background:transparent;border-color:var(--danger);color:var(--danger)}
+@media (prefers-reduced-motion:no-preference){.btn{transition:transform .2s ease,box-shadow .2s ease}.btn:hover{transform:translateY(-1px);box-shadow:0 12px 28px -14px rgba(0,0,0,.6)}}
+.now{display:flex;flex-direction:column;gap:6px;text-align:right;min-width:220px}
+@media (max-width:820px){.now{text-align:left;min-width:0}}
+.now small{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--on-photo-dim)}
+.now b{font-family:var(--f-display);font-weight:400;font-size:34px;line-height:1}
+.now span{font-size:14px;color:var(--on-photo-dim);max-width:34ch;margin-left:auto}
+@media (max-width:820px){.now span{margin-left:0}}
+.now .code{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;color:var(--gold-hi)}
+.dots{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px;margin-top:30px}
+.seg{background:none;border:0;padding:10px 0 0;cursor:pointer;text-align:left;color:var(--on-photo-dim);font-size:12px;font-weight:600;letter-spacing:.04em;position:relative;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seg::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:rgba(255,255,255,.28)}
+.seg i{position:absolute;left:0;top:0;height:2px;width:0;background:var(--gold-hi)}
+.seg.on{color:#fff}
+.seg.on i{width:100%;transition:width 7s linear}
+.seg.done i{width:100%}
+@media (max-width:640px){.seg{font-size:0;padding-top:6px}}
+
+/* sections */
+section.block{padding-block:84px}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;margin-bottom:34px}
+.sec-head > div{display:flex;flex-direction:column;gap:12px;max-width:640px}
+.sec-head p{margin:0;color:var(--muted);max-width:42ch}
+
+/* gallery mosaic */
+.mosaic{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:260px;gap:14px}
+.mosaic .d1{grid-column:span 2;grid-row:span 2}
+.mosaic .d7{grid-column:span 3}
+@media (max-width:900px){.mosaic{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:230px}.mosaic .d1{grid-column:span 2;grid-row:span 1}.mosaic .d7{grid-column:span 1}}
+@media (max-width:560px){.mosaic{grid-template-columns:minmax(0,1fr);grid-auto-rows:240px}.mosaic .d1{grid-column:auto}}
+.dest{position:relative;border-radius:18px;overflow:hidden;border:0;padding:0;cursor:pointer;text-align:left;color:#fff;background:var(--night);display:block;width:100%;height:100%}
+.dest .ph{position:absolute;inset:0}
+@media (prefers-reduced-motion:no-preference){.dest .ph{transition:transform 1.2s cubic-bezier(.2,.7,.2,1)}.dest:hover .ph{transform:scale(1.06)}}
+.dest::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,10,18,0) 30%,rgba(5,10,18,.55) 62%,rgba(5,10,18,.9) 100%)}
+.dest-in{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:20px 22px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.dest-in > div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.dest .code{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.16em;color:var(--gold-hi)}
+.dest b{font-family:var(--f-display);font-weight:400;font-size:32px;line-height:1}
+.dest.d1 b{font-size:clamp(36px,4.4vw,54px)}
+.dest small{font-size:13.5px;color:rgba(255,255,255,.8)}
+.go{flex:none;width:44px;height:44px;border-radius:50%;border:1.5px solid rgba(255,255,255,.75);display:grid;place-items:center;backdrop-filter:blur(6px);background:rgba(255,255,255,.1)}
+@media (prefers-reduced-motion:no-preference){.go{transition:background .25s,color .25s}.dest:hover .go{background:var(--gold-hi);border-color:var(--gold-hi);color:#1a1206}}
+
+/* how */
+.how{background:var(--night);color:#eef2f7;border-radius:28px;padding:clamp(28px,5vw,64px);display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:clamp(28px,5vw,70px);position:relative;overflow:hidden}
+@media (max-width:860px){.how{grid-template-columns:minmax(0,1fr)}}
+.how h2{color:#fff}
+.how p.sub{color:#a9b5c6;margin:16px 0 0;max-width:40ch}
+.steps{display:flex;flex-direction:column}
+.step{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;padding:22px 0;border-top:1px solid rgba(255,255,255,.14)}
+.step:last-child{border-bottom:1px solid rgba(255,255,255,.14)}
+.step .n{font-family:var(--f-display);font-style:italic;font-size:44px;line-height:.9;color:var(--gold-hi)}
+.step h3{color:#fff;font-size:26px}
+.step p{margin:6px 0 0;color:#a9b5c6;max-width:46ch}
+.programs{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px}
+.chip{font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.2);color:#dbe3ee}
+
+/* boarding pass */
+.pass{display:grid;grid-template-columns:minmax(0,1fr) 330px;background:var(--paper);border-radius:26px;box-shadow:var(--shadow);border:1px solid var(--line);overflow:hidden}
+.pass-main{padding:clamp(22px,4vw,44px);display:flex;flex-direction:column;gap:28px;min-width:0}
+.pass-stub{border-left:2px dashed var(--line);position:relative;display:flex;flex-direction:column}
+.stub-photo{height:190px;position:relative;flex:none}
+.stub-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,10,18,.1),rgba(5,10,18,.55))}
+.stub-photo .ph{position:absolute;inset:0;transition:opacity .6s}
+.stub-photo .label{position:absolute;left:18px;bottom:14px;z-index:1;color:#fff;font-family:var(--f-display);font-size:26px;line-height:1}
+.stub-in{padding:22px 24px 26px;display:flex;flex-direction:column;gap:20px;position:sticky;top:20px}
+@media (max-width:900px){.pass{grid-template-columns:minmax(0,1fr)}.pass-stub{order:-1;border-left:0;border-bottom:2px dashed var(--line)}.stub-in{position:static}}
+.airline{display:flex;justify-content:space-between;align-items:center;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.big-route{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.iata{font-family:var(--f-mono);font-weight:600;font-size:40px;line-height:1;letter-spacing:.02em}
+.iata.ph-txt{color:var(--line)}
+.big-route svg{flex:1;max-width:96px;height:22px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px}
+.kv div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.kv small{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.kv b{font-weight:600;font-size:15px;overflow-wrap:anywhere}
+.barcode{height:44px;border-radius:3px;background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 4px,var(--ink) 4px 5px,transparent 5px 8px,var(--ink) 8px 11px,transparent 11px 12px,var(--ink) 12px 13px,transparent 13px 17px);opacity:.8}
+.fieldset{display:flex;flex-direction:column;gap:14px}
+.fs-head{display:flex;align-items:baseline;gap:12px}
+.fs-head .tag{font-family:var(--f-display);font-style:italic;font-size:26px;color:var(--gold);line-height:1}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:640px){.grid.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:440px){.grid{grid-template-columns:minmax(0,1fr)}.grid.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.full{grid-column:1/-1}
+label{display:flex;flex-direction:column;gap:7px;font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);min-width:0}
+input,select,textarea{font-family:var(--f-body);font-size:16px;letter-spacing:0;text-transform:none;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;width:100%;min-width:0;font-weight:500}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);outline:none;box-shadow:0 0 0 4px color-mix(in srgb, var(--gold) 18%, transparent)}
+input:disabled{opacity:.45}
+textarea{min-height:96px;resize:vertical}
+input.code{font-family:var(--f-mono);font-weight:600;font-size:22px;letter-spacing:.08em;text-transform:uppercase;padding:9px 14px}
+.check{flex-direction:row;align-items:center;gap:9px;font-family:var(--f-body);font-size:15px;letter-spacing:0;text-transform:none;color:var(--ink);font-weight:500;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--gold)}
+.segs{display:flex;flex-wrap:wrap;gap:6px}
+.segs input{position:absolute;opacity:0;pointer-events:none;width:1px}
+.segs label{flex-direction:row;font-family:var(--f-body);font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:9px 16px;cursor:pointer;background:var(--bg)}
+.segs input:checked + label{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.segs input:focus-visible + label{outline:2px solid var(--gold);outline-offset:2px}
+.bal{display:grid;grid-template-columns:minmax(0,1fr) 140px 44px;gap:8px;align-items:center}
+@media (max-width:440px){.bal{grid-template-columns:minmax(0,1fr) 100px 40px}}
+.x{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:12px;height:46px;cursor:pointer;font-size:18px}
+.hint{font-size:14px;color:var(--muted);margin:0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toast{font-size:14px;color:var(--ok);font-weight:600}
+.err{font-size:14px;color:var(--danger);font-weight:600}
+.addlink{background:none;border:0;color:var(--gold);font-weight:700;cursor:pointer;padding:4px 0;font-size:15px}
+pre.out{font-family:var(--f-mono);font-size:13px;white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px dashed var(--line);border-radius:14px;padding:16px;margin:0;max-height:340px;overflow:auto}
+.notice{font-size:14px;color:var(--muted);background:var(--bg);border-radius:12px;padding:10px 14px}
+.stamp{font-family:var(--f-mono);font-weight:600;text-transform:uppercase;font-size:13px;letter-spacing:.18em;color:var(--ok);border:2px solid var(--ok);border-radius:6px;padding:6px 12px;transform:rotate(-4deg);align-self:flex-start}
+
+footer{padding-block:30px 44px;color:var(--muted);font-size:13px}
+footer .inner{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:20px}
+footer .brand{font-size:22px;color:var(--ink)}
+
+/* points search */
+.ps-wrap{background:var(--paper);border-block:1px solid var(--line)}
+.ps{display:grid;grid-template-columns:380px minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:960px){.ps{grid-template-columns:minmax(0,1fr)}}
+.ps-panel{background:var(--bg);border:1px solid var(--line);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:18px;position:sticky;top:20px}
+@media (max-width:960px){.ps-panel{position:static}}
+.ps-step{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ps-step > small{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.pcards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pcard{position:relative;text-align:left;border:1.5px solid var(--line);background:var(--paper);border-radius:14px;padding:12px 12px 11px;cursor:pointer;display:flex;flex-direction:column;gap:2px;min-width:0;color:var(--ink)}
+.pcard b{font-size:15px;font-weight:700}
+.pcard small{font-size:11.5px;color:var(--muted);line-height:1.3}
+.pc-chip{width:22px;height:16px;border-radius:4px;background:linear-gradient(135deg,var(--gold-hi),var(--gold));margin-bottom:6px;opacity:.55}
+.pc-check{position:absolute;top:10px;right:10px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:800;border:1.5px solid var(--line);color:transparent}
+.pcard.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.pcard.on .pc-chip{opacity:1}
+.pcard.on .pc-check{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.ps-route{display:grid;grid-template-columns:minmax(0,1fr) 40px minmax(0,1fr);gap:8px;align-items:end}
+.ps-route input{background:var(--paper)}
+.ps-swap{height:46px;border:1px solid var(--line);background:var(--paper);border-radius:12px;cursor:pointer;color:var(--muted);display:grid;place-items:center}
+.ps-swap svg{width:18px;height:18px}
+.ps-regnote{margin-top:-8px;min-height:1em;font-size:13px}
+.ps-opts{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.tog{display:flex;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px}
+.tog button{border:0;background:none;border-radius:9px;padding:8px 11px;font-size:13.5px;font-weight:600;cursor:pointer;color:var(--muted);white-space:nowrap}
+.tog button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.ps-pax{width:96px}
+.ps-pax input{background:var(--paper);padding:9px 12px}
+.ps-panel select{background:var(--paper)}
+.ps-out{display:flex;flex-direction:column;gap:14px;min-width:0}
+.ps-summary{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:flex-end;padding:4px 2px 6px}
+.ps-summary:empty{display:none}
+.ps-summary > div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ps-summary small{font-size:13px;color:var(--muted)}
+.ps-summary > div:first-child b{font-family:var(--f-display);font-weight:400;font-size:32px;line-height:1.05}
+.ps-best{text-align:right}
+.ps-best b{font-size:28px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.ps-best b span{font-size:14px;font-weight:500;color:var(--muted);letter-spacing:0}
+.ps-best > span{font-size:13px;color:var(--muted)}
+@media (max-width:600px){.ps-best{text-align:left}}
+.ps-results{display:flex;flex-direction:column;gap:10px}
+.pres{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:18px;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px 20px}
+.pres.first{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+@media (max-width:640px){.pres{grid-template-columns:minmax(0,1fr)}}
+.pr-main{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pr-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.pr-badge{font-size:11.5px;font-weight:700;color:var(--gold-ink);background:var(--gold);border-radius:999px;padding:3px 9px}
+.pr-all{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 8px}
+.pres h4{margin:0;font-size:19px;font-weight:700;line-height:1.25}
+.pr-prog{margin:0;font-size:14.5px}
+.pr-xfer{margin:0;font-size:13.5px;color:var(--muted)}
+.pr-note{margin:6px 0 0;font-size:13.5px;color:var(--ink);background:var(--bg);border-radius:10px;padding:8px 11px}
+.pr-cost{display:flex;flex-direction:column;gap:4px;align-items:flex-end;text-align:right;border-left:1px dashed var(--line);padding-left:18px}
+@media (max-width:640px){.pr-cost{align-items:flex-start;text-align:left;border-left:0;border-top:1px dashed var(--line);padding:14px 0 0}}
+.pr-pts b{font-size:24px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;display:block;line-height:1.15}
+.pr-pts small{font-size:12.5px;color:var(--muted)}
+.pr-fee{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.pr-fee small{font-weight:500;color:var(--muted);font-size:12.5px}
+.pr-each{font-size:12px;color:var(--muted)}
+.pr-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px}
+@media (max-width:640px){.pr-acts{justify-content:flex-start}}
+.ps-empty{padding:40px 20px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:18px}
+.ps-empty a{color:var(--gold);font-weight:600}
+.ps-fine{font-size:12.5px;color:var(--muted);margin:4px 0 0;max-width:80ch}
+
+/* stays */
+.stay-tabs{align-self:flex-start}
+.srow{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:18px;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:16px 20px;align-items:center}
+.srow.first{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+@media (max-width:640px){.srow{grid-template-columns:minmax(0,1fr)}}
+.srow h4{margin:0;font-size:17px;font-weight:700;line-height:1.3}
+.srow p{margin:3px 0 0;font-size:13.5px;color:var(--muted)}
+.srow .pr-note{color:var(--ink)}
+.s-cost{text-align:right;display:flex;flex-direction:column;gap:2px;align-items:flex-end}
+@media (max-width:640px){.s-cost{text-align:left;align-items:flex-start}}
+.s-cost b{font-size:24px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15}
+.s-cost small{font-size:12.5px;color:var(--muted)}
+.cpp{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;font-weight:600;border-radius:999px;padding:3px 9px;margin-top:4px;background:color-mix(in srgb, currentColor 12%, transparent)}
+.cpp.good{color:var(--ok)}.cpp.ok{color:var(--warn)}.cpp.meh{color:var(--muted)}
+.stay-other{font-size:13.5px;color:var(--muted)}
+.stay-other:empty{display:none}
+.stay-other b{color:var(--ink)}
+.verdict{border-radius:14px;padding:12px 16px;font-size:14px;background:var(--bg);border:1px solid var(--line)}
+.ps-summary .verdict b{font-family:var(--f-body)!important;font-size:inherit!important;font-weight:700!important;line-height:inherit!important;display:inline!important}
+
+/* unified search tool */
+.tool-wrap{position:relative;z-index:6;margin-top:-84px;padding-bottom:40px}
+.tool{background:var(--paper);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);padding:clamp(16px,2.6vw,28px);display:flex;flex-direction:column;gap:18px}
+.tool-tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);padding-bottom:14px;overflow-x:auto}
+.tool-tabs button{display:inline-flex;align-items:center;gap:9px;border:1px solid transparent;background:none;border-radius:999px;padding:11px 20px;font-size:16px;font-weight:700;cursor:pointer;color:var(--muted);white-space:nowrap}
+.tool-tabs button svg{width:19px;height:19px}
+@media (max-width:480px){.tool-tabs{gap:4px}.tool-tabs button{flex:1;justify-content:center;padding:10px 8px;font-size:14px;gap:6px}.tool-tabs button svg{display:none}}
+.tool-tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.tool-tabs button:not([aria-selected="true"]):hover{border-color:var(--line);color:var(--ink)}
+.tool-cards{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tool-cards > small{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.tool .pcards{display:flex;flex-wrap:wrap;gap:6px}
+.tool .pcard{flex-direction:row;align-items:center;gap:8px;padding:7px 13px 7px 8px;border-radius:999px;border-width:1px}
+.tool .pcard small,.tool .pcard .pc-chip{display:none}
+.tool .pcard b{font-size:14px;font-weight:600}
+.tool .pcard .pc-check{position:static;width:18px;height:18px;font-size:10px}
+.tool-row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;background:var(--bg);border:1px solid var(--line);border-radius:20px;padding:16px}
+.tool-row .ps-route{flex:1 1 300px}
+.tool-row .grow{flex:1 1 240px}
+.tool-row > label:not(.ps-pax):not(.grow){flex:0 1 170px}
+.tool-row input,.tool-row select{background:var(--paper)}
+.tool-sub{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;margin-top:-6px;font-size:13.5px}
+.tool-sub a{color:var(--gold);font-weight:600}
+.inline-sel{flex-direction:row;align-items:center;gap:10px;font-family:var(--f-body);font-size:13.5px;letter-spacing:0;text-transform:none;font-weight:500}
+.inline-sel select{width:auto;padding:7px 10px;font-size:14px;background:var(--paper)}
+.ps-regnote{margin:0}
+.help-band{padding-block:20px 70px}
+.hb{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;border:1px dashed var(--line);border-radius:22px;padding:22px 26px}
+.hb h3{font-size:26px}
+.hb p{margin:4px 0 0;color:var(--muted);font-size:14.5px}
+
+/* tool v2: filters, sidebar, chains */
+.tool-grid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:22px;align-items:start}
+@media (max-width:980px){.tool-grid{grid-template-columns:minmax(0,1fr)}}
+.tool-side{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px}
+@media (max-width:980px){.tool-side{position:static}}
+.side-card{background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.side-card h5{margin:0;font-size:15px;font-weight:700}
+.perk{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px solid var(--line)}
+.perk:first-of-type{border-top:0;padding-top:0}
+.perk-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.perk-h b{font-size:14px}
+.perk-h small{font-size:12px;color:var(--muted);white-space:nowrap}
+.perk ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.perk li::marker{color:var(--gold)}
+.lounges{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.lounges li{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:12px;background:var(--paper);border:1px solid var(--line)}
+.lounges li span{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.lounges li b{font-size:14px}
+.lounges li small{font-size:12.5px;color:var(--muted)}
+.lounges li em{font-style:normal;font-size:12.5px;font-weight:600}
+.lounges li.yes em{color:var(--ok)}
+.lounges li.no{opacity:.7}
+.lounges li.no em{color:var(--muted);font-weight:500}
+.lounges a{color:var(--gold)}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.filter-row > small{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.filter-row:empty{display:none}
+.chain{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.ch-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.ch-head h4{margin:0;font-size:20px;font-weight:700}
+.ch-head small{font-size:13px;color:var(--muted)}
+.ch-links{display:flex;gap:6px;flex-wrap:wrap}
+.ch-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.ch-facts{grid-template-columns:minmax(0,1fr)}}
+.ch-facts > div{background:var(--bg);border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.ch-facts small{font-size:12px;color:var(--muted);font-weight:600}
+.ch-facts b{font-size:14.5px;font-weight:600;line-height:1.45}
+.ch-facts span{font-size:12.5px;color:var(--muted)}
+.ch-facts .via{font-weight:500}
+.ch-calc summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--gold)}
+.ch-calc[open] summary{margin-bottom:12px}
+.ch-in{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.mini{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:6px}
+.mini li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:9px 12px;border-radius:10px;background:var(--bg);font-size:14px}
+.mini li.best{background:color-mix(in srgb, var(--gold) 14%, var(--paper));box-shadow:inset 0 0 0 1px var(--gold)}
+.mini li span{display:flex;flex-direction:column;min-width:0}
+.mini li span small{font-size:12px;color:var(--muted)}
+.mini li b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.mini li b small{font-weight:500;color:var(--muted);font-size:12px}
+
+/* planner layout */
+.planner-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.planner-head > div{display:flex;flex-direction:column;gap:8px}
+.planner-head h2{font-size:clamp(34px,4.4vw,50px)}
+.planner-head p{max-width:42ch;margin:0}
+.mapbox{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:22px;overflow:hidden}
+.worldmap{width:100%;height:clamp(240px,40vw,440px)}
+.map-cap{display:flex;justify-content:space-between;gap:10px;padding:10px 16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);background:var(--paper)}
+.mdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--gold);margin-right:8px;vertical-align:middle;box-shadow:0 0 0 3px color-mix(in srgb, var(--gold) 25%, transparent)}
+.map-fallback{padding:18px;display:flex;flex-wrap:wrap;gap:6px}
+.jvm-container{touch-action:none;position:relative;overflow:hidden;height:100%;width:100%}
+.jvm-tooltip{position:absolute;display:none;background:var(--ink);color:var(--bg);font-family:var(--f-body);font-size:13px;font-weight:600;padding:7px 11px;border-radius:9px;white-space:nowrap;pointer-events:none;z-index:9;box-shadow:var(--shadow)}
+.jvm-tooltip.active{display:block}
+.jvm-zoom-btn{position:absolute;left:12px;width:30px;height:30px;border-radius:9px;background:var(--paper);border:1px solid var(--line);color:var(--ink);display:grid;place-items:center;cursor:pointer;font-weight:700;font-size:16px;line-height:1;user-select:none;z-index:4}
+.jvm-zoom-btn.jvm-zoomin{top:12px}.jvm-zoom-btn.jvm-zoomout{top:48px}
+.jvm-marker{cursor:pointer}
+.jump{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:720px){.jump{grid-template-columns:minmax(0,1fr)}}
+.jcard{display:flex;gap:12px;align-items:center;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:14px 16px;cursor:pointer;color:var(--ink);min-width:0}
+.jcard:hover{border-color:var(--gold)}
+.jcard .rsec-ic{width:40px;height:40px}
+.jcard div{display:flex;flex-direction:column;min-width:0}
+.jcard small{font-size:12.5px;color:var(--muted);font-weight:600}
+.jcard b{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jcard span.go2{margin-left:auto;color:var(--muted);flex:none}
+.rsec{margin-top:22px;background:var(--paper);border:1px solid var(--line);border-radius:28px;padding:clamp(16px,2.6vw,28px);display:flex;flex-direction:column;gap:18px;scroll-margin-top:16px}
+.rsec-h{display:flex;align-items:center;gap:14px}
+.rsec-h > div{display:flex;flex-direction:column;gap:2px}
+.rsec-h small{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.rsec-h h3{font-size:clamp(28px,3.4vw,38px)}
+.rsec-ic{width:48px;height:48px;border-radius:14px;background:var(--ink);color:var(--bg);display:grid;place-items:center;flex:none}
+.rsec-ic svg{width:22px;height:22px}
+
+/* v3: welcome hero with search */
+.hero{height:auto;min-height:clamp(640px,96vh,940px)}
+.hero-in{position:relative;inset:auto;min-height:inherit;display:flex;flex-direction:column;justify-content:flex-end;padding-block:112px 28px}
+.hero-stack{display:flex;flex-direction:column;gap:22px}
+.welcome h1{font-size:clamp(48px,7.4vw,104px);margin-top:12px}
+.welcome .lede{margin-top:14px}
+.sbox{background:rgba(7,13,22,.62);-webkit-backdrop-filter:blur(16px) saturate(1.2);backdrop-filter:blur(16px) saturate(1.2);border:1px solid rgba(255,255,255,.16);border-radius:26px;padding:16px;display:flex;flex-direction:column;gap:14px;color:#fff;box-shadow:0 30px 60px -30px rgba(0,0,0,.7)}
+.sbox-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.sbox-row .ps-route{flex:1 1 300px}
+.sbox label,.sbox .ps-step > small,.sbox-cards > small{color:rgba(255,255,255,.72)}
+.sbox input,.sbox select{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:#fff}
+.sbox input::placeholder{color:rgba(255,255,255,.5)}
+.sbox input:focus,.sbox select:focus{border-color:#e8c987;box-shadow:0 0 0 4px rgba(232,201,135,.22)}
+.sbox select option{color:#0d1b2e}
+.sbox .ps-swap{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:#fff}
+.sbox .tog{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2)}
+.sbox .tog button{color:rgba(255,255,255,.78)}
+.sbox .tog button[aria-pressed="true"]{background:#fff;color:#0d1b2e}
+.sbox .ps-pax{width:92px}
+.sbtn{height:50px;padding:0 26px;background:#e8c987;border-color:#e8c987;color:#1a1206;font-size:16px;flex:0 0 auto}
+@media (max-width:640px){.sbtn{flex:1 1 100%;justify-content:center}}
+.sbox-cards{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:12px;border-top:1px solid rgba(255,255,255,.14)}
+.sbox-cards > small{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase}
+.sbox .pcards{display:flex;flex-wrap:wrap;gap:6px}
+.sbox .pcard{flex-direction:row;align-items:center;gap:8px;padding:7px 13px 7px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.06);color:#fff}
+.sbox .pcard small,.sbox .pcard .pc-chip{display:none}
+.sbox .pcard b{font-size:14px;font-weight:600}
+.sbox .pcard .pc-check{position:static;width:18px;height:18px;font-size:10px;border-color:rgba(255,255,255,.4)}
+.sbox .pcard.on{background:#fff;color:#0d1b2e;border-color:#fff;box-shadow:none}
+.sbox .pcard.on .pc-check{background:#0d1b2e;border-color:#0d1b2e;color:#fff}
+.sbox-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;font-size:13px;color:rgba(255,255,255,.72)}
+.sbox .inline-sel{color:rgba(255,255,255,.72)}
+.sbox .inline-sel select{background:rgba(255,255,255,.1)}
+.popular{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.popular > small{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-right:4px}
+.popular button{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:#fff;border-radius:999px;padding:7px 14px;font-size:14px;font-weight:600;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.popular button:hover{background:#fff;color:#0d1b2e}
+.hero-foot{display:flex;justify-content:flex-end}
+.now-cap{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+.ownerbtn{border:1px solid currentColor;background:rgba(255,255,255,.08);color:inherit;border-radius:999px;padding:8px 14px;font-size:13.5px;font-weight:700;cursor:pointer;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+body:not(.on-hero) .ownerbtn{color:var(--ink)}
+/* results */
+.results{padding-block:28px 20px}
+.tripbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:color-mix(in srgb, var(--paper) 88%, transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:20px;padding:10px 12px;box-shadow:var(--shadow)}
+.tb-route{display:flex;flex-direction:column;padding:0 8px;margin-right:auto;min-width:0}
+.tb-route small{font-size:12px;color:var(--muted);font-weight:600}
+.tb-route b{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-chip{display:flex;align-items:center;gap:9px;border:1px solid var(--line);background:var(--bg);border-radius:14px;padding:7px 12px 7px 7px;cursor:pointer;color:var(--ink);text-align:left;min-width:0}
+.tb-chip:hover{border-color:var(--gold)}
+.tb-chip .rsec-ic{width:32px;height:32px;border-radius:10px}
+.tb-chip .rsec-ic svg{width:16px;height:16px}
+.tb-chip span{display:flex;flex-direction:column;min-width:0}
+.tb-chip small{font-size:11.5px;color:var(--muted);font-weight:600}
+.tb-chip b{font-size:13.5px;font-weight:700;white-space:nowrap}
+@media (max-width:760px){.tripbar{gap:6px}.tb-route{flex-basis:100%;padding:2px 4px 4px}.tb-chip{flex:1 1 0;padding:6px 8px}.tb-chip .rsec-ic{display:none}.tb-chip b{font-size:12.5px;white-space:normal}}
+.more-btn{align-self:center;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:10px 20px;font-weight:700;font-size:14px;cursor:pointer}
+.more-btn:hover{border-color:var(--gold)}
+.explore-map{margin-bottom:22px}
+.viewbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.mv-note{font-size:14px;color:var(--muted);padding:10px 14px;background:var(--bg);border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+.mv-note b{color:var(--ink)}
+.mv-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-right:8px}
+@media (prefers-reduced-motion:no-preference){.mv-dot{animation:pulse 1s ease-in-out infinite}}
+.mv{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:14px;height:clamp(480px,70vh,720px)}
+@media (max-width:860px){.mv{grid-template-columns:minmax(0,1fr);height:auto}.mv-map{height:380px;order:-1}.mv-list{max-height:520px}}
+.mv-list{overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px}
+.mv-item{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:8px;cursor:pointer;color:var(--ink);width:100%}
+.mv-item:hover,.mv-item.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+.mv-item img,.mv-ph{width:64px;height:64px;border-radius:10px;object-fit:cover}
+.mv-ph{display:grid;place-items:center;background:var(--bg);font-family:var(--f-display);font-size:28px;color:var(--gold)}
+.mv-txt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mv-txt b{font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mv-txt small{font-size:12.5px;color:var(--muted)}
+.mv-txt .mv-tr{color:var(--ok)}
+.mv-price{display:flex;flex-direction:column;align-items:flex-end;text-align:right;gap:1px}
+.mv-price b{font-size:16px;font-variant-numeric:tabular-nums}
+.mv-price small{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.mv-map{border-radius:18px;overflow:hidden;border:1px solid var(--line);position:relative;background:var(--bg);min-height:300px}
+.mv-fallback{background:linear-gradient(115deg,transparent 46%,color-mix(in srgb,var(--gold) 30%,transparent) 46.5%,color-mix(in srgb,var(--gold) 30%,transparent) 47.5%,transparent 48%),linear-gradient(20deg,transparent 60%,var(--line) 60.5%,var(--line) 61.5%,transparent 62%),repeating-linear-gradient(0deg,transparent 0 34px,var(--line) 34px 35px),repeating-linear-gradient(90deg,transparent 0 34px,var(--line) 34px 35px),var(--bg)}
+.mk{display:inline-block;transform:translate(-50%,-50%);background:var(--paper);color:var(--ink);border:1.5px solid var(--ink);border-radius:999px;padding:5px 10px;font:700 12.5px/1 var(--f-body);white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.2);cursor:pointer}
+.mv-fallback .mk{position:absolute}
+.mk:hover,.mk.hot,.hot .mk{background:var(--ink);color:var(--paper);z-index:5}
+.mk.demo{border-style:dashed}
+.mv-pop{position:absolute;left:12px;bottom:12px;right:12px;max-width:320px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 40px 14px 14px;box-shadow:var(--shadow);z-index:10}
+.mv-x{position:absolute;top:8px;right:8px;height:30px;width:30px}
+.pop b{display:block;font-size:15px}
+.pop small{color:var(--muted);font-size:12.5px}
+.pop p{margin:6px 0;font-weight:600}
+.pop ul{margin:0 0 10px;padding-left:16px;font-size:13px}
+.leaflet-container{font-family:var(--f-body);background:var(--bg)}
+.leaflet-popup-content{margin:12px 14px}
+.hmap{display:grid;grid-template-columns:220px minmax(0,1fr);border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--paper)}
+@media (max-width:640px){.hmap{grid-template-columns:minmax(0,1fr)}.hmap-art{height:120px}}
+.hmap-art{position:relative;min-height:150px;background:
+  linear-gradient(115deg,transparent 46%,color-mix(in srgb,var(--gold) 35%,transparent) 46.5%,color-mix(in srgb,var(--gold) 35%,transparent) 48%,transparent 48.5%),
+  linear-gradient(20deg,transparent 60%,var(--line) 60.5%,var(--line) 62%,transparent 62.5%),
+  repeating-linear-gradient(0deg,transparent 0 26px,var(--line) 26px 27px),
+  repeating-linear-gradient(90deg,transparent 0 26px,var(--line) 26px 27px),var(--bg)}
+.pin{position:absolute;width:14px;height:14px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--gold);box-shadow:0 0 0 3px var(--paper)}
+.p1{left:22%;top:30%}.p2{left:58%;top:22%;background:var(--ink)}.p3{left:40%;top:58%}.p4{left:74%;top:62%}.p5{left:16%;top:72%;background:var(--ink)}
+.hmap-body{padding:16px 20px;display:flex;flex-direction:column;gap:6px}
+.hmap-body small{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.hmap-body b{font-size:18px;font-weight:700}
+.hmap-body p{margin:0;font-size:14px;color:var(--muted)}
+.hmap-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
+.hmap-acts .fchip{text-decoration:none}
+.mc-legs{display:flex;flex-direction:column;gap:8px}
+.mc-leg{display:grid;grid-template-columns:76px minmax(0,1fr) minmax(0,1fr) 44px;gap:8px;align-items:end}
+.mc-n{font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.72);padding-bottom:16px}
+.sbox .x{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.22);color:#fff}
+.mc-add{align-self:flex-start;background:none;border:1px dashed rgba(255,255,255,.4);color:#fff;border-radius:999px;padding:8px 16px;font-weight:700;font-size:14px;cursor:pointer}
+@media (max-width:560px){.mc-leg{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 40px}.mc-n{grid-column:1/-1;padding:0}}
+.rl{background:var(--bg);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.rl-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rl-h h4{margin:0;font-size:18px;font-weight:700}
+.rl-h small{font-size:13px;color:var(--muted)}
+.rl-stops{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(270px,1fr);gap:12px;overflow-x:auto;padding-bottom:4px}
+@media (max-width:760px){.rl-stops{grid-auto-flow:row;grid-auto-columns:auto}}
+.rl-stop{display:flex;flex-direction:column;gap:10px;min-width:0;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:14px;position:relative}
+.rl-code{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rl-code b{font-family:var(--f-mono);font-weight:600;font-size:26px;letter-spacing:.04em}
+.rl-code small{font-size:13px;color:var(--muted)}
+.lother{margin:0;font-size:12.5px;color:var(--muted)}
+.lcount{margin:0;font-size:13px;font-weight:700;color:var(--ok)}
+.rl-stop .lounges li{background:var(--bg)}
+.ltag{font-style:normal;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lounges li.maybe em{color:var(--warn)}
+.leg{display:flex;flex-direction:column;gap:10px;padding-bottom:6px}
+.leg + .leg{border-top:1px dashed var(--line);padding-top:18px}
+.leg-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.leg-n{font-family:var(--f-mono);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.leg-h b{font-family:var(--f-mono);font-size:20px;font-weight:600}
+.leg-h small{color:var(--muted);font-size:13px}
+.leg-best{margin-left:auto;font-weight:700;font-size:14px}
+#fl-lounges:empty{display:none}
+.mode{display:flex;gap:4px;align-self:flex-start;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:4px}
+.mode button{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;background:none;color:rgba(255,255,255,.82);padding:9px 18px;border-radius:999px;font-weight:700;font-size:15px;cursor:pointer;white-space:nowrap}
+.mode button svg{width:17px;height:17px}
+.mode button[aria-selected="true"]{background:#fff;color:#0d1b2e}
+.mode button:not([aria-selected="true"]):hover{color:#fff;background:rgba(255,255,255,.1)}
+@media (max-width:560px){.mode{align-self:stretch}.mode button{flex:1;padding:9px 8px;font-size:14px;gap:6px}}
+@media (max-width:400px){.mode button svg{display:none}}
+.sbox .grow{flex:1 1 260px}
+.tb-chip[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);background:var(--paper)}
+@media (max-width:640px){.clientnav{display:none}.hero-in{padding-top:92px}.ownerbtn{padding:7px 12px;font-size:12.5px}}
+
+/* owner dashboard */
+.dash{padding-block:30px 80px;display:flex;flex-direction:column;gap:22px}
+.dash-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.dash-head > div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.dash-head h2{font-size:clamp(38px,5vw,54px)}
+.hello{font-size:14px;color:var(--muted);font-weight:500}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:860px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px 20px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.kpi small{font-size:13px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:8px}
+.kpi small i{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.kpi b{font-size:clamp(26px,3vw,34px);font-weight:600;letter-spacing:-.025em;font-variant-numeric:tabular-nums;line-height:1.15;color:var(--ink)}
+.kpi span{font-size:12.5px;color:var(--muted)}
+.kpi.k1 small{color:var(--new)}.kpi.k2 small{color:var(--gold)}.kpi.k3 small{color:var(--ok)}.kpi.k4 small{color:var(--ink)}
+.kpi small b{all:unset}
+.pipebar{display:flex;height:6px;border-radius:99px;overflow:hidden;gap:3px}
+.pipebar span{background:currentColor;border-radius:99px;min-width:6px}
+.pipebar .empty-bar{flex:1;background:var(--line)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.fchip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:7px 13px;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.fchip i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.fchip em{font-style:normal;font-variant-numeric:tabular-nums;color:var(--muted);font-weight:500}
+.fchip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.fchip[aria-pressed="true"] em{color:var(--bg);opacity:.7}
+.tools{display:flex;gap:8px;align-items:center;flex:1;justify-content:flex-end;min-width:240px}
+.search{position:relative;flex:1;max-width:300px;min-width:0}
+.search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--muted);pointer-events:none}
+.search input{padding:9px 12px 9px 38px;border-radius:999px;background:var(--paper);font-size:14.5px}
+.vt{display:flex;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px;flex:none}
+.vt button{border:0;background:none;border-radius:999px;padding:6px 10px;cursor:pointer;color:var(--muted);display:grid;place-items:center}
+.vt button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.vt svg{width:16px;height:16px}
+.btn-add{flex:none}
+/* list */
+.rlist{background:var(--paper);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.rhead,.rrow{display:grid;grid-template-columns:52px minmax(0,1.5fr) minmax(0,1.1fr) minmax(0,.8fr) 150px;gap:16px;align-items:center;padding:12px 20px}
+.rhead{font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);padding-block:10px;background:var(--bg)}
+.rhead span:first-child{grid-column:1/3}
+.rrow{border:0;border-bottom:1px solid var(--line);background:none;width:100%;text-align:left;cursor:pointer;color:var(--ink)}
+.rrow:last-child{border-bottom:0}
+@media (prefers-reduced-motion:no-preference){.rrow{transition:background .15s}}
+.rrow:hover{background:var(--bg)}
+.thumb{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-family:var(--f-mono);font-weight:600;font-size:13px;color:#fff;flex:none;overflow:hidden}
+.thumb.gen{background:linear-gradient(140deg,var(--gold),#3a2a10)}
+.cellm{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cellm b{font-weight:600;font-size:15.5px;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cellm b .arr{color:var(--muted);font-weight:400}
+.cellm small{font-size:13.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cellm .num{font-variant-numeric:tabular-nums}
+.stcell{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;border-radius:999px;padding:4px 10px;background:color-mix(in srgb, currentColor 12%, transparent);white-space:nowrap}
+.badge i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.fee{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ex{font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;text-transform:uppercase}
+@media (max-width:760px){.rhead{display:none}.rrow{grid-template-columns:48px minmax(0,1fr) auto;padding:12px 14px;gap:12px}.rrow .hide-sm{display:none}.thumb{width:48px;height:48px}}
+/* board */
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(230px,1fr));gap:12px;overflow-x:auto;padding-bottom:8px}
+.kcol{background:color-mix(in srgb, var(--line) 35%, transparent);border-radius:18px;padding:10px;display:flex;flex-direction:column;gap:10px;min-height:160px}
+.kcol-h{display:flex;justify-content:space-between;align-items:center;padding:4px 6px;font-size:13px;font-weight:700}
+.kcol-h em{font-style:normal;color:var(--muted);font-weight:500}
+.kcard{background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden;cursor:pointer;text-align:left;padding:0;color:var(--ink);display:flex;flex-direction:column}
+@media (prefers-reduced-motion:no-preference){.kcard{transition:transform .15s,box-shadow .15s}.kcard:hover{transform:translateY(-2px);box-shadow:var(--shadow)}}
+.kcard .kph{height:84px;position:relative}
+.kcard .kph.gen{background:linear-gradient(140deg,var(--gold),#3a2a10);display:grid;place-items:center;color:#fff;font-family:var(--f-mono);font-weight:600;letter-spacing:.1em}
+.kcard .kb{padding:11px 13px 13px;display:flex;flex-direction:column;gap:3px}
+.kcard b{font-weight:600;font-size:15px}
+.kcard small{font-size:12.5px;color:var(--muted)}
+.kempty{font-size:13px;color:var(--muted);text-align:center;padding:18px 6px;border:1px dashed var(--line);border-radius:12px}
+.empty{text-align:center;color:var(--muted);padding:44px 18px;border:1px dashed var(--line);border-radius:20px;background:var(--paper)}
+/* drawer */
+.scrim{position:fixed;inset:0;background:rgba(5,10,18,.5);z-index:40;backdrop-filter:blur(3px)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(540px,100%);background:var(--paper);z-index:41;box-shadow:-30px 0 60px -30px rgba(0,0,0,.5);display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain;padding-right:env(safe-area-inset-right,0px)}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slidein .32s cubic-bezier(.2,.8,.2,1)}.scrim{animation:fadein .25s}@keyframes slidein{from{transform:translateX(40px);opacity:0}}@keyframes fadein{from{opacity:0}}}
+.dr-photo{flex:none;min-height:200px;position:relative;color:#fff;display:flex;flex-direction:column;justify-content:flex-end;padding:calc(20px + env(safe-area-inset-top,0px)) 24px 20px}
+.dr-photo > .ph,.dr-photo > .gen{position:absolute;inset:0}
+.dr-photo .gen{background:linear-gradient(140deg,var(--gold),#3a2a10)}
+.dr-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,10,18,.35),rgba(5,10,18,.1) 40%,rgba(5,10,18,.8))}
+.dr-photo > div{position:relative;z-index:1;display:flex;flex-direction:column;gap:4px}
+.dr-photo .code{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;color:var(--gold-hi)}
+.dr-photo h3{font-size:38px;color:#fff}
+.dr-photo p{margin:0;font-size:14px;color:rgba(255,255,255,.82)}
+.dr-x{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:14px;z-index:2;width:38px;height:38px;border-radius:50%;border:0;background:rgba(5,10,18,.45);color:#fff;cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(6px)}
+.dr-x.plain{position:static;background:var(--bg);color:var(--ink)}
+.dr-body{padding:22px 24px;display:flex;flex-direction:column;gap:22px;flex:1}
+.dr-sec{display:flex;flex-direction:column;gap:10px}
+.dr-sec > small{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.02em}
+.stbar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;background:var(--bg);padding:4px;border-radius:14px;border:1px solid var(--line)}
+.stbar button{border:0;background:none;border-radius:10px;padding:9px 4px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted)}
+.stbar button[aria-pressed="true"]{background:var(--paper);color:currentColor;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.fact{background:var(--bg);border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.fact small{font-size:12px;color:var(--muted);font-weight:600}
+.fact b{font-weight:600;font-size:14.5px;overflow-wrap:anywhere}
+.fact.wide{grid-column:1/-1}
+.pts-list{display:flex;flex-direction:column;gap:6px}
+.pts-row{display:flex;justify-content:space-between;gap:12px;font-size:14.5px;padding:9px 13px;background:var(--bg);border-radius:10px}
+.pts-row b{font-variant-numeric:tabular-nums}
+.dr-foot{position:sticky;bottom:0;background:var(--paper);border-top:1px solid var(--line);padding:14px 24px calc(14px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.dr-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:calc(20px + env(safe-area-inset-top,0px)) 24px 0}
+.settings{padding-block:30px 72px}
+.settings .card{max-width:620px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:12px}
+.list{display:flex;flex-direction:column;gap:12px}
+
+</style>
+
+<header class="top gut">
+  <div class="inner">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M21 15.5v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0v5l-8 5v2l8-2.5v5l-2 1.5v1.5l3.5-1 3.5 1V20l-2-1.5v-5l8 2.5Z" fill="currentColor"/></svg></span>
+      <span id="bizName">Award Trip Desk</span>
+    </div>
+    <nav class="tabs" id="ownerTabs" hidden>
+      <button class="tab" data-view="client" aria-selected="false">Portal</button>
+      <button class="tab" data-view="dash" aria-selected="true">Requests</button>
+      <button class="tab" data-view="settings" aria-selected="false">Settings</button>
+    </nav>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><nav class="clientnav" id="topCta" aria-label="Sections"><a href="#sec-flights" data-go="flights">Flights</a><a href="#sec-hotels" data-go="hotels">Hotels</a><a href="#sec-cars" data-go="cars">Rental cars</a><a href="#destinations">Explore</a></nav><button type="button" class="ownerbtn" id="ownerBtn" hidden>Requests</button></div>
+  </div>
+</header>
+
+<!-- ================= CLIENT PAGE ================= -->
+<main id="view-client">
+  <div class="hero" id="hero">
+    <div id="slides"></div>
+    <div class="hero-in gut">
+      <div class="inner hero-stack">
+        <div class="welcome">
+          <div class="eyebrow">Welcome to your travel portal</div>
+          <h1>Fly up front.<br><em>Pay in points.</em></h1>
+          <p class="lede" id="bizTag">Search every airline and hotel your credit card points can book. See the points, the fees, and the cheapest way to pay.</p>
+        </div>
+        <div class="sbox" role="search">
+          <div class="mode" role="tablist" aria-label="What are you searching for?">
+            <button type="button" role="tab" data-m="flights" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 15.5v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0v5l-8 5v2l8-2.5v5l-2 1.5v1.5l3.5-1 3.5 1V20l-2-1.5v-5l8 2.5Z" fill="currentColor"/></svg>Flights</button>
+            <button type="button" role="tab" data-m="hotels" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 19V6m0 8h18v5M7 10.5a1.5 1.5 0 1 0 0-.01M11 10h7a3 3 0 0 1 3 3v1H11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Hotels</button>
+            <button type="button" role="tab" data-m="cars" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 16h14M4 16v-3l2-5h12l2 5v3M4 16v2h3v-2m10 0v2h3v-2M7.5 13h.01M16.5 13h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Rental cars</button>
+          </div>
+          <div class="sbox-row" id="sb-fl">
+            <div class="ps-route">
+              <label for="ps-from">From<input id="ps-from" class="code" list="airports" value="JFK" maxlength="4" autocomplete="off"></label>
+              <button class="ps-swap" id="ps-swap" type="button" aria-label="Swap origin and destination"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 7h12l-3-3M17 17H5l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <label for="ps-to">To<input id="ps-to" class="code" list="airports" value="LHR" maxlength="4" autocomplete="off"></label>
+            </div>
+            <div class="ps-step"><small>Cabin</small><div class="tog" id="ps-cabin"><button type="button" data-v="e" aria-pressed="false">Economy</button><button type="button" data-v="b" aria-pressed="true">Business</button><button type="button" data-v="f" aria-pressed="false">First</button></div></div>
+            <div class="ps-step"><small>Trip</small><div class="tog" id="ps-trip"><button type="button" data-v="ow" aria-pressed="true">One way</button><button type="button" data-v="rt" aria-pressed="false">Round trip</button><button type="button" data-v="mc" aria-pressed="false">Multi-city</button></div></div>
+            <label for="ps-pax" class="ps-pax">Travelers<input id="ps-pax" type="number" min="1" max="9" value="1"></label>
+            <button class="btn sbtn" type="button" id="goSearch">Search<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2.4"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="mc-legs" id="mc-legs" hidden></div>
+          <div class="sbox-row" id="sb-ho" hidden>
+            <label for="hx-city" class="grow">Where are you staying?<input id="hx-city" list="cities" placeholder="City" autocomplete="off"></label>
+            <label for="hx-nights" class="ps-pax">Nights<input id="hx-nights" type="number" min="1" max="30" value="3"></label>
+            <button class="btn sbtn" type="button" data-search="hotels">Search hotels<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2.4"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="sbox-row" id="sb-car" hidden>
+            <label for="hx-ap" class="grow">Pickup airport<input id="hx-ap" class="code" list="airports" maxlength="4" autocomplete="off"></label>
+            <label for="hx-days" class="ps-pax">Days<input id="hx-days" type="number" min="1" max="60" value="3"></label>
+            <label for="hx-cash" class="ps-pax" style="width:150px">Total price<input id="hx-cash" inputmode="decimal" placeholder="Optional"></label>
+            <button class="btn sbtn" type="button" data-search="cars">Search cars<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2.4"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+          </div>
+          <div class="sbox-cards"><small>Pay with</small><div class="pcards pcards-host" id="pcards"></div></div>
+          <div class="sbox-foot" id="sb-foot">
+            <span class="ps-regnote" id="ps-regnote"></span>
+            <label for="ps-region" class="inline-sel">No airport code?<select id="ps-region"><option value="">Pick a region</option><option value="dom">United States &amp; Canada</option><option value="hi">Hawaii</option><option value="mx">Mexico, Caribbean &amp; Central America</option><option value="sa">South America</option><option value="eu">Europe</option><option value="me">Middle East &amp; India</option><option value="af">Africa</option><option value="na">Japan &amp; Korea</option><option value="sea">China, Hong Kong &amp; Southeast Asia</option><option value="oc">Australia &amp; New Zealand</option></select></label>
+          </div>
+        </div>
+        <div class="popular" id="popular"><small>Popular</small></div>
+        <div class="hero-foot"><span class="now-cap"><span id="nowCity">Cologne</span> · <span id="nowCode">CGN · GERMANY</span></span><span id="nowLine" hidden></span></div>
+        <div class="dots" id="dots" hidden></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="gut results" id="results">
+    <div class="inner">
+      <div class="tripbar" id="jump"></div>
+      <section class="rsec" id="sec-flights">
+        <div class="rsec-h"><span class="rsec-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M21 15.5v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0v5l-8 5v2l8-2.5v5l-2 1.5v1.5l3.5-1 3.5 1V20l-2-1.5v-5l8 2.5Z" fill="currentColor"/></svg></span><div><small>Getting there</small><h3 id="fl-title">Flights</h3></div></div>
+        <div id="fl-lounges"></div>
+        <div class="tool-grid"><div class="ps-out">
+          <div class="ps-summary" id="ps-summary"></div>
+          <div class="filter-row" id="ps-filter"></div>
+          <div class="ps-results" id="ps-results"></div>
+          <p class="ps-fine">Typical lowest (saver) prices, collected in 2026 from published award charts and points-travel sites. Saver seats are limited and prices change. Find a seat on the airline's site before you transfer points, because transfers usually can't be undone. Taxes and fees are estimates.</p>
+        </div><aside class="tool-side" id="fl-side"></aside></div>
+      </section>
+
+      <section class="rsec" id="sec-hotels">
+        <div class="rsec-h"><span class="rsec-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3 19V6m0 8h18v5M7 10.5a1.5 1.5 0 1 0 0-.01M11 10h7a3 3 0 0 1 3 3v1H11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><small>Where to stay</small><h3 id="h-title">Hotels</h3></div></div>
+        <div class="tool-row">
+          <label for="hs-city" class="grow">City<input id="hs-city" list="cities" placeholder="e.g. Paris" autocomplete="off"></label>
+          <label for="hs-in">Check-in<input id="hs-in" type="date"></label>
+          <label for="hs-nights" class="ps-pax">Nights<input id="hs-nights" type="number" min="1" max="30" value="3"></label>
+        </div>
+        <div class="viewbar"><div class="tog" id="h-view"><button type="button" data-v="brands" aria-pressed="true">Compare brands</button><button type="button" data-v="map" aria-pressed="false">Map of hotels</button></div></div>
+        <div id="h-mapview" hidden><div class="mv-note" id="mv-note"></div><div class="mv"><div class="mv-list" id="mv-list"></div><div class="mv-map" id="mv-map"></div></div></div>
+        <div class="tool-grid" id="h-brands"><div class="ps-out">
+          <div class="ps-summary" id="h-summary"></div>
+          <div id="h-map"></div>
+          <div class="filter-row" id="h-filter"></div>
+          <div class="ps-results" id="h-results"></div>
+          <p class="ps-fine">Card values: Capital One 1¢ per mile on Capital One Travel, or when you cover a travel purchase within 90 days. Chase 1¢, or up to 2¢ on select hotels with Points Boost. Amex 0.7¢ for hotels on Amex Travel. Citi and Wells Fargo 1¢. Bilt 1.25¢ on Bilt Travel. Stays booked through a card's travel site usually don't earn hotel points or elite perks.</p>
+        </div><aside class="tool-side" id="h-side"></aside></div>
+      </section>
+
+      <section class="rsec" id="sec-cars">
+        <div class="rsec-h"><span class="rsec-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16h14M4 16v-3l2-5h12l2 5v3M4 16v2h3v-2m10 0v2h3v-2M7.5 13h.01M16.5 13h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><small>Getting around</small><h3 id="c-title">Rental cars</h3></div></div>
+        <div class="tool-row">
+          <label for="cs-ap" class="grow">Pickup airport<input id="cs-ap" class="code" list="airports" maxlength="4" autocomplete="off"></label>
+          <label for="cs-days" class="ps-pax">Days<input id="cs-days" type="number" min="1" max="60" value="3"></label>
+          <label for="cs-cash">Total price (optional)<input id="cs-cash" inputmode="decimal" placeholder="$"></label>
+        </div>
+        <div class="tool-grid"><div class="ps-out">
+          <div class="ps-summary" id="c-summary"></div>
+          <div class="filter-row" id="c-filter"></div>
+          <div class="ps-results" id="c-results"></div>
+          <p class="ps-fine">Rental companies don't take card points directly. You pay through your card's travel site or cover the charge afterward. Pay with a card that has primary coverage to skip the counter insurance.</p>
+        </div><aside class="tool-side" id="c-side"></aside></div>
+      </section>
+    </div>
+  </section>
+
+  <section class="block gut" id="destinations">
+    <div class="inner">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Explore</div>
+          <h2>Not sure where to <em>go?</em></h2>
+        </div>
+        <p>Tap any city on the map or a photo below to see every way your points can get you there.</p>
+      </div>
+      <div class="explore-map"><div class="mapbox">
+          <div id="worldmap" class="worldmap" role="img" aria-label="World map of destinations. Hover or tap a city to see the lowest points price."></div>
+          <div id="map-fallback" class="map-fallback" hidden></div>
+          <div class="map-cap"><span><i class="mdot"></i>Tap a city to search it. Hover to see the lowest points price with your cards.</span></div>
+        </div></div>
+      <div class="mosaic" id="mosaic"></div>
+    </div>
+  </section>
+
+  <section class="gut" id="how">
+    <div class="inner">
+      <div class="how">
+        <div>
+          <div class="eyebrow" style="color:var(--gold-hi)">How it works</div>
+          <h2 style="margin-top:12px">Three steps to the <em>front of the plane</em></h2>
+          <p class="sub">Card points are worth far more when you move them to the right airline or hotel. This tool shows you where they go furthest.</p>
+          <div class="programs">
+            <span class="chip">Chase Ultimate Rewards</span><span class="chip">Amex Membership Rewards</span><span class="chip">Capital One</span><span class="chip">Citi ThankYou</span><span class="chip">Bilt</span><span class="chip">United</span><span class="chip">Aeroplan</span><span class="chip">Flying Blue</span><span class="chip">Avios</span><span class="chip">Virgin Atlantic</span><span class="chip">Alaska</span><span class="chip">American</span><span class="chip">Delta</span>
+          </div>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="n">1</span><div><h3>Pick your cards</h3><p>Choose the cards you hold. The tool knows every airline and hotel each one transfers to, and at what ratio.</p></div></div>
+          <div class="step"><span class="n">2</span><div><h3>Compare every option</h3><p>See points, taxes and fees for each airline, hotel and rental car, cheapest first.</p></div></div>
+          <div class="step"><span class="n">3</span><div><h3>Find a seat, then transfer</h3><p>Confirm the seat or room on the airline or hotel site first. Then move your points and book. Transfers usually can't be undone.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="gut help-band" id="help">
+    <div class="inner"><div class="hb"><div><h3>Want an expert to find it for you?</h3><p>Send your trip and balances and get options back from a real person.</p></div><button class="btn ghost" type="button" id="showPlan">Request help</button></div></div>
+  </section>
+  <section class="block gut" id="plan" hidden style="padding-top:0">
+    <div class="inner">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Your boarding pass</div>
+          <h2>Where are we <em>going?</em></h2>
+        </div>
+        <p>Takes about two minutes. Rough answers are fine.</p>
+      </div>
+
+      <div class="pass">
+        <div class="pass-main">
+          <form id="reqForm" novalidate style="display:flex;flex-direction:column;gap:32px">
+            <div class="notice" id="previewNote" hidden>You're previewing what clients see when you share this page.</div>
+
+            <div class="fieldset">
+              <div class="fs-head"><span class="tag">i.</span><h3>Route &amp; dates</h3></div>
+              <div class="grid">
+                <label for="f-from">From<input id="f-from" class="code" list="airports" placeholder="JFK" maxlength="20" autocomplete="off" required></label>
+                <label for="f-to">To<input id="f-to" class="code" list="airports" placeholder="SYD" maxlength="20" autocomplete="off" required></label>
+                <label for="f-depart">Depart<input id="f-depart" type="date" required></label>
+                <label for="f-return">Return<input id="f-return" type="date"></label>
+                <label class="check full" for="f-oneway"><input type="checkbox" id="f-oneway"> One way</label>
+                <label class="full" for="f-flex">How flexible are you?
+                  <select id="f-flex"><option>Exact dates</option><option>± 1–2 days</option><option selected>± 3–5 days</option><option>Anytime that month</option></select></label>
+              </div>
+            </div>
+
+            <div class="fieldset">
+              <div class="fs-head"><span class="tag">ii.</span><h3>Cabin &amp; travelers</h3></div>
+              <div class="segs" role="radiogroup" aria-label="Cabin">
+                <input type="radio" name="cabin" id="c-econ" value="Economy"><label for="c-econ">Economy</label>
+                <input type="radio" name="cabin" id="c-prem" value="Premium economy"><label for="c-prem">Premium</label>
+                <input type="radio" name="cabin" id="c-biz" value="Business" checked><label for="c-biz">Business</label>
+                <input type="radio" name="cabin" id="c-first" value="First"><label for="c-first">First</label>
+                <input type="radio" name="cabin" id="c-any" value="Best value"><label for="c-any">Best value</label>
+              </div>
+              <div class="grid g4">
+                <label for="f-adults">Adults<input id="f-adults" type="number" min="1" max="9" value="2"></label>
+                <label for="f-kids">Children<input id="f-kids" type="number" min="0" max="9" value="0"></label>
+              </div>
+            </div>
+
+            <div class="fieldset">
+              <div class="fs-head"><span class="tag">iii.</span><h3>Your points</h3></div>
+              <p class="hint">Include bank points and airline miles.</p>
+              <div id="balRows" class="list" style="gap:8px"></div>
+              <div><button type="button" class="addlink" id="addBal">+ Add another program</button></div>
+            </div>
+
+            <div class="fieldset">
+              <div class="fs-head"><span class="tag">iv.</span><h3>About you</h3></div>
+              <div class="grid">
+                <label for="f-name">Name<input id="f-name" autocomplete="name" required></label>
+                <label for="f-contact">Phone or email<input id="f-contact" required></label>
+                <label class="full" for="f-notes">Anything else?<textarea id="f-notes" placeholder="Budget for taxes and fees, airlines you love or avoid, a special occasion…"></textarea></label>
+              </div>
+            </div>
+
+            <div class="row"><button class="btn" type="submit">Create my request
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span id="formMsg"></span></div>
+          </form>
+
+          <div id="clientResult" hidden style="display:flex;flex-direction:column;gap:16px">
+            <span class="stamp">Request ready</span>
+            <h3>Last step: send it over</h3>
+            <p class="hint" id="sendTo">Copy your request and send it to the person who shared this page with you.</p>
+            <pre class="out" id="reqOut"></pre>
+            <div class="row"><button class="btn" type="button" id="copyReq">Copy request</button><button class="btn ghost" type="button" id="editReq">Edit</button><span id="copyMsg"></span></div>
+          </div>
+        </div>
+
+        <aside class="pass-stub" aria-label="Trip summary">
+          <div class="stub-photo"><div class="ph ph-syd" id="stubPhoto"></div><span class="label" id="stubLabel">Your next trip</span></div>
+          <div class="stub-in">
+            <div class="airline"><span id="st-brand">Award Trip Desk</span><span>Award ticket</span></div>
+            <div class="big-route">
+              <span class="iata ph-txt" id="st-from">JFK</span>
+              <svg viewBox="0 0 96 22" fill="none" aria-hidden="true"><path d="M2 11h76" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="3 5"/><path d="M94 11l-9-5v3h-7v4h7v3Z" fill="var(--gold)"/></svg>
+              <span class="iata ph-txt" id="st-to">SYD</span>
+            </div>
+            <div class="kv">
+              <div><small>Depart</small><b id="st-dep">—</b></div>
+              <div><small>Return</small><b id="st-ret">—</b></div>
+              <div><small>Cabin</small><b id="st-cabin">Business</b></div>
+              <div><small>Travelers</small><b id="st-pax">2</b></div>
+              <div><small>Points</small><b id="st-pts">—</b></div>
+              <div><small>Passenger</small><b id="st-name">—</b></div>
+            </div>
+            <div class="barcode" aria-hidden="true"></div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <footer class="gut"><div class="inner"><span class="brand" id="footName">Award Trip Desk</span><span>Award seats aren't guaranteed until they're booked.</span></div></footer>
+</main>
+
+<datalist id="airports">
+  <option value="ATL">Atlanta</option><option value="BOS">Boston</option><option value="BUF">Buffalo (Niagara Falls)</option><option value="ORD">Chicago O'Hare</option><option value="DFW">Dallas/Fort Worth</option>
+  <option value="DEN">Denver</option><option value="IAH">Houston</option><option value="LAX">Los Angeles</option><option value="MIA">Miami</option><option value="MCO">Orlando</option>
+  <option value="JFK">New York JFK</option><option value="EWR">Newark</option><option value="SFO">San Francisco</option><option value="SEA">Seattle</option>
+  <option value="IAD">Washington Dulles</option><option value="YYZ">Toronto</option><option value="LHR">London Heathrow</option><option value="CDG">Paris</option>
+  <option value="FRA">Frankfurt</option><option value="CGN">Cologne</option><option value="AMS">Amsterdam</option><option value="MAD">Madrid</option><option value="FCO">Rome</option>
+  <option value="LIS">Lisbon</option><option value="ATH">Athens</option><option value="ZRH">Zurich</option><option value="IST">Istanbul</option>
+  <option value="DXB">Dubai</option><option value="DOH">Doha</option><option value="PEK">Beijing</option><option value="HAN">Hanoi</option><option value="HND">Tokyo Haneda</option>
+  <option value="ICN">Seoul</option><option value="SIN">Singapore</option><option value="HKG">Hong Kong</option><option value="BKK">Bangkok</option>
+  <option value="SYD">Sydney</option><option value="AKL">Auckland</option><option value="MLE">Maldives</option><option value="CUN">Cancún</option>
+  <option value="HNL">Honolulu</option><option value="CPT">Cape Town</option><option value="GRU">São Paulo</option><option value="KEF">Reykjavík</option>
+</datalist>
+<datalist id="cities"><option>New York</option><option>Los Angeles</option><option>Chicago</option><option>Miami</option><option>Orlando</option><option>Las Vegas</option><option>San Francisco</option><option>Honolulu</option><option>Cancún</option><option>London</option><option>Paris</option><option>Rome</option><option>Barcelona</option><option>Lisbon</option><option>Athens</option><option>Dubai</option><option>Tokyo</option><option>Seoul</option><option>Singapore</option><option>Bangkok</option><option>Bali</option><option>Sydney</option><option>Cologne</option><option>Hanoi</option><option>Niagara Falls</option></datalist>
+<datalist id="programs">
+  <option>Chase Ultimate Rewards</option><option>Amex Membership Rewards</option><option>Capital One Miles</option>
+  <option>Citi ThankYou</option><option>Bilt Rewards</option><option>United MileagePlus</option>
+  <option>Delta SkyMiles</option><option>American AAdvantage</option><option>Alaska Atmos Rewards</option>
+  <option>Southwest Rapid Rewards</option><option>Air Canada Aeroplan</option><option>Flying Blue</option>
+  <option>British Airways Avios</option><option>Virgin Atlantic Flying Club</option><option>Marriott Bonvoy</option>
+</datalist>
+
+<!-- ================= OWNER: REQUESTS ================= -->
+<main id="view-dash" class="gut" hidden>
+  <div class="inner dash">
+    <div class="dash-head">
+      <div><span class="hello" id="hello">Welcome back</span><h2>Requests</h2></div>
+      <button class="btn btn-add" type="button" id="openAdd"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>Add request</button>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="pipebar" id="pipebar" aria-hidden="true"></div>
+    <div class="toolbar">
+      <div class="filters" id="pipe"></div>
+      <div class="tools">
+        <label class="search" for="q" style="all:unset;position:relative;flex:1;max-width:300px;min-width:0"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="Search clients, airports…" aria-label="Search requests" style="padding:9px 12px 9px 38px;border-radius:999px;background:var(--paper);font-size:14.5px"></label>
+        <div class="vt" role="group" aria-label="View">
+          <button type="button" data-v="list" aria-pressed="true" aria-label="List view"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+          <button type="button" data-v="board" aria-pressed="false" aria-label="Board view"><svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="4" width="5" height="16" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="10.5" y="4" width="5" height="11" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="17.5" y="4" width="3" height="7" rx="1.2" stroke="currentColor" stroke-width="2"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div id="reqList"><div class="empty">Loading requests…</div></div>
+  </div>
+</main>
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" hidden role="dialog" aria-modal="true" aria-label="Request details"></aside>
+
+
+<!-- ================= OWNER: SETTINGS ================= -->
+<main id="view-settings" class="gut" hidden>
+  <div class="inner settings">
+    <div class="sec-head"><div><div class="eyebrow">Settings</div><h2>Your business</h2></div></div>
+    <form class="card" id="setForm">
+      <p class="hint">These show on your client page.</p>
+      <label for="s-name">Business name<input id="s-name" placeholder="Award Trip Desk"></label>
+      <label for="s-tag">Intro under the headline<textarea id="s-tag"></textarea></label>
+      <label for="s-contact">Where clients send requests<input id="s-contact" placeholder="Your email or phone number"></label>
+      <div class="row"><button class="btn small" type="submit">Save settings</button><span id="setMsg"></span></div>
+    </form>
+  </div>
+</main>
+
+<script src="config.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/js/jsvectormap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/maps/world.js"></script>
+<script>
+(function(){
+const $ = id => document.getElementById(id);
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const STAGES = [["new","New"],["searching","Searching"],["quoted","Quoted"],["booked","Booked"],["closed","Closed"]];
+const DEFAULTS = {name:"Award Trip Desk", tag:"Search every airline and hotel your credit card points can book. See the points, the fees, and the cheapest way to pay.", contact:""};
+const DESTS = [
+  {k:"cgn",city:"Cologne",country:"Germany",code:"CGN",to:"FRA",line:"Business class to Frankfurt, then an hour on the train."},
+  {k:"han",city:"Ha Long Bay",country:"Vietnam",code:"HAN",to:"HAN",line:"Fly into Hanoi, then a few hours' drive to the bay."},
+  {k:"pek",city:"Great Wall",country:"China",code:"PEK",to:"PEK",line:"An easy day trip from Beijing."},
+  {k:"syd",city:"Sydney",country:"Australia",code:"SYD",to:"SYD",line:"One of the hardest award routes to find. That's where I come in."},
+  {k:"mco",city:"Orlando",country:"Florida",code:"MCO",to:"MCO",line:"The whole family on miles, without the cash fares."},
+  {k:"buf",city:"Niagara Falls",country:"USA & Canada",code:"BUF",to:"BUF",line:"Fly into Buffalo or Toronto, both under an hour's drive."},
+  {k:"jfk",city:"New York",country:"USA",code:"JFK",to:"JFK",line:"Land at JFK, Newark or LaGuardia."}
+];
+const byCode={};DESTS.forEach(d=>{byCode[d.code]=d;byCode[d.to]=d;});
+byCode.YYZ=byCode.BUF;byCode.EWR=byCode.JFK;byCode.LGA=byCode.JFK;byCode.CGN=DESTS[0];
+let db=null,isOwner=false,requests=[],settings={...DEFAULTS},filter=null,openId=null;
+
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function flash(el,text,cls="toast"){el.className=cls;el.textContent=text;clearTimeout(el._t);el._t=setTimeout(()=>{el.textContent=""},3800);}
+function fmtDate(d,short){if(!d)return"";const t=new Date(d+"T12:00:00");return isNaN(t)?d:t.toLocaleDateString(undefined,short?{month:"short",day:"numeric"}:{month:"short",day:"numeric",year:"numeric"});}
+function toNum(n){return Number(String(n||"").replace(/[^\d.]/g,""))||0;}
+function num(n){const v=toNum(n);return v?v.toLocaleString():String(n||"");}
+async function copy(text,msgEl,box){
+  try{await navigator.clipboard.writeText(text);flash(msgEl,"Copied");}
+  catch(e){const r=document.createRange();r.selectNodeContents(box);const s=getSelection();s.removeAllRanges();s.addRange(r);flash(msgEl,"Text selected. Use your device's Copy.","hint");}
+}
+const PLANE='<svg viewBox="0 0 26 16" fill="none" aria-hidden="true"><path d="M1 8h17" stroke="currentColor" stroke-width="2" stroke-dasharray="2 3"/><path d="M25 8l-6-4v3h-1v2h1v3Z" fill="currentColor"/></svg>';
+const ARROW='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/* ---------- hero slideshow ---------- */
+const slidesEl=$("slides"),dotsEl=$("dots");let cur=0,timer=null;
+DESTS.forEach((d,i)=>{
+  const s=document.createElement("div");s.className="slide"+(i===0?" on":"");s.innerHTML=`<div class="ph ph-${d.k}" role="img" aria-label="${esc(d.city)}, ${esc(d.country)}"></div>`;slidesEl.appendChild(s);
+  const b=document.createElement("button");b.className="seg";b.setAttribute("role","tab");b.innerHTML=`<i></i>${esc(d.city)}`;b.onclick=()=>go(i,true);dotsEl.appendChild(b);
+});
+function go(i,user){
+  const S=slidesEl.children,D=dotsEl.children;
+  S[cur].classList.remove("on");cur=(i+DESTS.length)%DESTS.length;
+  // restart drift animation
+  const ph=S[cur].firstElementChild;ph.style.animation="none";void ph.offsetWidth;ph.style.animation="";
+  S[cur].classList.add("on");
+  [...D].forEach((b,j)=>{b.classList.remove("on");b.classList.toggle("done",j<cur);b.setAttribute("aria-selected",j===cur);});
+  void D[cur].offsetWidth;D[cur].classList.add("on");
+  const d=DESTS[cur];$("nowCity").textContent=d.city;$("nowCode").textContent=`${d.code} · ${d.country.toUpperCase()}`;$("nowLine").textContent=d.line;
+  clearTimeout(timer);timer=setTimeout(()=>go(cur+1),7000);
+}
+requestAnimationFrame(()=>go(0));
+document.addEventListener("visibilitychange",()=>{if(document.hidden)clearTimeout(timer);else timer=setTimeout(()=>go(cur+1),7000);});
+
+/* ---------- mosaic ---------- */
+$("mosaic").innerHTML=DESTS.map((d,i)=>`<button class="dest d${i+1}" data-code="${d.to}" aria-label="Plan a trip to ${esc(d.city)}">
+  <div class="ph ph-${d.k}"></div>
+  <div class="dest-in"><div><span class="code">${d.code} · ${esc(d.country.toUpperCase())}</span><b>${esc(d.city)}</b><small>${esc(d.line)}</small></div><span class="go">${ARROW}</span></div></button>`).join("");
+$("mosaic").querySelectorAll(".dest").forEach(b=>b.onclick=()=>{
+  $("ps-to").value=b.dataset.code;$("f-to").value=b.dataset.code;updateStub();
+  runSearch();setMode("flights",true);
+});
+
+/* ---------- balances ---------- */
+let balN=0;
+function addBal(p="",a=""){
+  const row=document.createElement("div");row.className="bal";const n=balN++;
+  row.innerHTML=`<input list="programs" id="bp-${n}" placeholder="e.g. Chase Ultimate Rewards" aria-label="Program"><input id="ba-${n}" inputmode="numeric" placeholder="Points" aria-label="Balance"><button type="button" class="x" aria-label="Remove program">×</button>`;
+  row.children[0].value=p;row.children[1].value=a;
+  row.children[2].onclick=()=>{row.remove();updateStub();};
+  $("balRows").appendChild(row);
+}
+addBal();addBal();
+$("addBal").onclick=()=>addBal();
+$("f-oneway").onchange=e=>{$("f-return").disabled=e.target.checked;updateStub();};
+
+/* ---------- collect + stub ---------- */
+function cabin(){return (document.querySelector('input[name="cabin"]:checked')||{}).value||"Business";}
+function collect(){
+  const balances=[...$("balRows").children].map(r=>({program:r.children[0].value.trim(),amount:r.children[1].value.trim()})).filter(b=>b.program||b.amount);
+  return {client:{name:$("f-name").value.trim(),contact:$("f-contact").value.trim()},
+    trip:{from:$("f-from").value.trim().toUpperCase(),to:$("f-to").value.trim().toUpperCase(),depart:$("f-depart").value,ret:$("f-oneway").checked?"":$("f-return").value,
+      oneway:$("f-oneway").checked,flex:$("f-flex").value,cabin:cabin(),adults:+$("f-adults").value||1,kids:+$("f-kids").value||0},
+    balances,notes:$("f-notes").value.trim()};
+}
+function short(n){return n>=1e6?(n/1e6).toFixed(n%1e6?1:0)+"M":n>=1e3?Math.round(n/1e3)+"K":String(n);}
+let stubK="syd";
+function updateStub(){
+  const r=collect(),t=r.trip;
+  const f=$("st-from"),to=$("st-to");
+  f.textContent=(t.from||"JFK").slice(0,4);f.classList.toggle("ph-txt",!t.from);
+  to.textContent=(t.to||"SYD").slice(0,4);to.classList.toggle("ph-txt",!t.to);
+  $("st-dep").textContent=fmtDate(t.depart,true)||"—";
+  $("st-ret").textContent=t.oneway?"One way":(fmtDate(t.ret,true)||"—");
+  $("st-cabin").textContent=t.cabin;
+  $("st-pax").textContent=t.adults+t.kids;
+  const pts=r.balances.reduce((s,b)=>s+toNum(b.amount),0);
+  $("st-pts").textContent=pts?short(pts):"—";
+  $("st-name").textContent=r.client.name||"—";
+  const d=byCode[t.to];
+  const k=d?d.k:"syd";
+  if(k!==stubK){$("stubPhoto").className="ph ph-"+k;stubK=k;}
+  $("stubLabel").textContent=d?d.city:(t.to?t.to:"Your next trip");
+}
+$("reqForm").addEventListener("input",updateStub);
+$("reqForm").addEventListener("change",updateStub);
+
+function encode(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o))));}
+function decode(s){return JSON.parse(decodeURIComponent(escape(atob(s))));}
+function summary(r){
+  const t=r.trip,pax=`${t.adults} adult${t.adults>1?"s":""}${t.kids?`, ${t.kids} child${t.kids>1?"ren":""}`:""}`;
+  const lines=[`AWARD TRIP REQUEST`,`${r.client.name}  (${r.client.contact})`,``,
+    `Route: ${t.from} → ${t.to}${t.oneway?" (one way)":" (round trip)"}`,
+    `Depart: ${fmtDate(t.depart)}${t.ret?`   Return: ${fmtDate(t.ret)}`:""}`,
+    `Flexibility: ${t.flex}`,`Cabin: ${t.cabin}`,`Travelers: ${pax}`,``,
+    `Points:`,...(r.balances.length?r.balances.map(b=>`  • ${b.program||"Program"}: ${num(b.amount)}`):["  (none listed)"])];
+  if(r.notes)lines.push("",`Notes: ${r.notes}`);
+  lines.push("",`Request code: TRIPREQ:${encode(r)}`);
+  return lines.join("\n");
+}
+$("reqForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const r=collect(),miss=[];
+  if(!r.trip.from)miss.push("origin");if(!r.trip.to)miss.push("destination");if(!r.trip.depart)miss.push("departure date");
+  if(!r.client.name)miss.push("name");if(!r.client.contact)miss.push("phone or email");
+  if(miss.length){flash($("formMsg"),`Add your ${miss.join(", ")} to continue.`,"err");return;}
+  $("reqOut").textContent=summary(r);
+  $("reqForm").hidden=true;$("clientResult").hidden=false;
+  $("plan").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});
+});
+$("copyReq").onclick=()=>copy($("reqOut").textContent,$("copyMsg"),$("reqOut"));
+$("editReq").onclick=()=>{$("clientResult").hidden=true;$("reqForm").hidden=false;};
+
+function applySettings(){
+  const n=settings.name||DEFAULTS.name;
+  $("bizName").textContent=n;$("st-brand").textContent=n;$("footName").textContent=n;
+  $("bizTag").textContent=settings.tag||DEFAULTS.tag;
+  $("sendTo").textContent=settings.contact?`Copy your request and send it to ${settings.contact}. You'll hear back with options.`:"Copy your request and send it to the person who shared this page with you.";
+}
+
+/* ---------- card perks + lounges ---------- */
+const PRODUCTS=[
+ {id:"vx",card:"c1",name:"Venture X",fee:"$395/yr",lounges:[["c1",""],["pp",""],["plaza",""]],
+  air:["$300 a year in credit for Capital One Travel bookings","10,000 bonus miles every anniversary","Up to $120 credit for Global Entry or TSA PreCheck","Capital One Lounge and Priority Pass access. Guests cost extra unless you spend $75K a year."],
+  hotel:["10x miles on hotels booked through Capital One Travel","Premier and Lifestyle Collection hotel perks on Capital One Travel","Cover hotel charges with miles at 1¢ each within 90 days"],
+  car:["Hertz President's Circle status (enroll through Capital One)","Primary rental car coverage when you pay with the card","10x miles on rental cars booked through Capital One Travel"],
+  status:{hertz:"President's Circle"}},
+ {id:"venture",card:"c1",name:"Venture",fee:"$95/yr",lounges:[["c1","2 free visits a year"]],
+  air:["Up to $120 credit for Global Entry or TSA PreCheck","2 free Capital One Lounge visits a year"],
+  hotel:["5x miles on hotels booked through Capital One Travel"],
+  car:["Hertz Five Star status","Secondary rental car coverage","5x miles on rental cars booked through Capital One Travel"],
+  status:{hertz:"Five Star"}},
+ {id:"csr",card:"chase",name:"Sapphire Reserve",fee:"$795/yr",lounges:[["sapphire",""],["pp","You plus 2 guests"],["maple","When flying Star Alliance"]],
+  air:["$300 a year travel credit","Up to $120 credit for Global Entry or TSA PreCheck","Priority Pass for you and 2 guests","Trip delay coverage up to $500 per ticket"],
+  hotel:["IHG One Rewards Platinum Elite status (through 2027)","Up to $500 a year on The Edit hotels, with breakfast and possible upgrades","Points Boost: up to 2¢ per point on select hotels"],
+  car:["Primary rental car coverage up to $75,000","National Emerald Club status and up to 25% off","Avis Preferred Plus and up to 30% off"],
+  status:{ihg:"Platinum Elite",national:"Emerald Club status, up to 25% off",avis:"Preferred Plus, up to 30% off"}},
+ {id:"csp",card:"chase",name:"Sapphire Preferred",fee:"$95/yr",lounges:[],
+  air:["Trip cancellation and trip delay coverage"],hotel:["$50 a year hotel credit on Chase Travel"],car:["Primary rental car coverage"],status:{}},
+ {id:"plat",card:"amex",name:"Platinum Card",fee:"$895/yr",lounges:[["centurion",""],["pp",""],["escape",""],["plaza","Plus 1 guest"],["delta","When flying Delta, 10 visits a year"]],
+  air:["Up to $200 a year in airline fee credits (one airline you pick)","Up to $219 a year CLEAR+ credit","Up to $120 Global Entry credit"],
+  hotel:["Hilton Honors Gold status","Marriott Bonvoy Gold Elite status","Up to $600 a year on Fine Hotels + Resorts or The Hotel Collection"],
+  car:["Hertz President's Circle","Avis Preferred","National Emerald Club Executive","Secondary rental car coverage up to $75,000"],
+  status:{hilton:"Gold status",marriott:"Gold Elite status",hertz:"President's Circle",avis:"Preferred",national:"Emerald Club Executive"}},
+ {id:"gold",card:"amex",name:"Gold Card",fee:"$325/yr",lounges:[],
+  air:[],hotel:["$100 property credit on 2+ night stays through The Hotel Collection"],car:["Secondary rental car coverage"],status:{}},
+ {id:"elite",card:"citi",name:"Strata Elite",fee:"$595/yr",lounges:[["pp","You plus 2 guests"],["admirals","4 passes a year"]],
+  air:["4 Admirals Club passes a year","Up to $120 Global Entry credit","Up to $200 a year in Blacklane car service credits"],
+  hotel:["Up to $300 a year on a 2+ night stay booked on Citi Travel"],car:[],status:{}},
+ {id:"premier",card:"citi",name:"Strata Premier",fee:"$95/yr",lounges:[],
+  air:[],hotel:["$100 off one $500+ hotel stay a year on Citi Travel"],car:[],status:{}},
+ {id:"palladium",card:"bilt",name:"Bilt Palladium",fee:"$495/yr",lounges:[["pp","You plus 2 guests"]],
+  air:["Priority Pass for you and 2 guests"],hotel:["$400 a year in Bilt Travel hotel credits ($200 twice a year, 2-night minimum)"],car:["Mastercard rental car coverage"],status:{}},
+ {id:"obsidian",card:"bilt",name:"Bilt Obsidian",fee:"",lounges:[],
+  air:[],hotel:["$100 a year in Bilt Travel hotel credits"],car:[],status:{}},
+ {id:"journey",card:"wf",name:"Autograph Journey",fee:"$95/yr",lounges:[],
+  air:["$50 a year airline credit"],hotel:[],car:["Secondary rental car coverage"],status:{}},
+ {id:"ritz",card:"mb",name:"Ritz-Carlton Card",fee:"$450/yr · product change only",lounges:[["pp",""]],
+  air:["Priority Pass Select membership","$300 a year airline incidental credit (request it from Chase)","Global Entry application credit"],
+  hotel:["Marriott Bonvoy Gold Elite status","Free night each year (up to 85,000 points)","3 Club Level upgrades a year at Ritz-Carlton","$100 credit on paid Ritz-Carlton stays of 2+ nights"],
+  car:["Primary rental car coverage"],status:{marriott:"Gold Elite status"}},
+ {id:"brilliant",card:"mb",name:"Bonvoy Brilliant (Amex)",fee:"$650/yr",lounges:[["pp",""]],
+  air:["Priority Pass Select membership"],hotel:["Marriott Bonvoy Platinum Elite status","Free night each year (up to 85,000 points)","Up to $300 a year in dining credits"],car:[],status:{marriott:"Platinum Elite status"}},
+ {id:"altitude",card:"usb",name:"Altitude Reserve",fee:"$400/yr",lounges:[["pp","Limited visits a year"]],
+  air:["$325 a year travel credit"],hotel:[],car:[],status:{}}
+];
+const NETS={
+  c1:{n:"Capital One Lounges",u:"https://www.capitalone.com"},
+  sapphire:{n:"Chase Sapphire Lounges",u:"https://www.chase.com"},
+  centurion:{n:"Centurion Lounges",u:"https://www.americanexpress.com"},
+  maple:{n:"Air Canada Maple Leaf Lounges",u:"https://www.aircanada.com"},
+  pp:{n:"Priority Pass",u:"https://www.prioritypass.com/lounges"},
+  plaza:{n:"Plaza Premium",u:"https://www.plazapremiumlounge.com"},
+  escape:{n:"Escape Lounges",u:"https://www.escapelounges.com"},
+  delta:{n:"Delta Sky Club",u:"https://www.delta.com"},
+  admirals:{n:"Admirals Club",u:"https://www.aa.com"}
+};
+const WIDE=["pp","plaza","escape","delta","admirals"];
+const LOUNGE_AT={
+ JFK:[["centurion","Centurion Lounge","Terminal 4"],["c1","Capital One Lounge","Terminal 4"],["sapphire","Chase Sapphire Lounge","Terminal 4"],[["pp"],"Air France Lounge","Terminal 1"],[["pp"],"Korean Air Lounge","Terminal 1"],[["pp"],"Lufthansa Business Lounge","Terminal 1"],[["pp"],"Primeclass Lounge","Terminal 1"],[["pp"],"Turkish Airlines Lounge","Terminal 1"],[["pp"],"Air India Maharaja Lounge","Terminal 4"],[["pp"],"Virgin Atlantic Clubhouse","Terminal 4"]],
+ LGA:[["centurion","Centurion Lounge","Terminal B"],["c1","Capital One Landing","Terminal B"],["sapphire","Chase Sapphire Lounge","Terminal B"]],
+ DFW:[["centurion","Centurion Lounge","Terminal D"],["c1","Capital One Lounge","Terminal D, near D22"],[["pp"],"The Club DFW","Terminal D"],[["plaza","pp"],"Plaza Premium Lounge","Terminal D"],[["plaza","pp"],"Plaza Premium Lounge","Terminal E"]],
+ DEN:[["centurion","Centurion Lounge","Concourse C"],["c1","Capital One Lounge","Concourse A"]],
+ IAD:[["c1","Capital One Lounge","Main Terminal"],["sapphire","Chase Sapphire Lounge (shared with Etihad)","Concourse A"],[["pp"],"British Airways Galleries Lounge","Concourse B, limited hours"]],
+ DCA:[["centurion","Centurion Lounge","Terminal 2"],["c1","Capital One Landing","Terminal 2, Concourse D"]],
+ LAS:[["centurion","Centurion Lounge","Concourse D"],["c1","Capital One Lounge","Concourse D"],["sapphire","Chase Sapphire Lounge","Concourse C"],[["pp"],"The Club LAS","Terminal 1, Concourse D"],[["pp"],"The Club LAS","Terminal 3"]],
+ BOS:[["sapphire","Chase Sapphire Lounge","Terminal B–C connector"],[["pp"],"Air France Lounge","Terminal E"],[["pp"],"The Lounge","Terminal C"]],
+ PHL:[["centurion","Centurion Lounge","Terminal A West"],["sapphire","Chase Sapphire Lounge","Terminal D/E connector"]],
+ PHX:[["centurion","Centurion Lounge","Terminal 4"],["sapphire","Chase Sapphire Lounge","Terminal 4"]],
+ SAN:[["sapphire","Chase Sapphire Lounge","Terminal 2"]],
+ CLT:[["centurion","Centurion Lounge","Between Concourses D and E"],[["pp"],"The Club CLT","Concourse A"]],
+ IAH:[["centurion","Centurion Lounge","Terminal D"],[["pp"],"Air France Lounge","Terminal D"],[["pp"],"KLM Crown Lounge","Terminal D"]],
+ ATL:[["centurion","Centurion Lounge","Concourse E"],[["pp"],"The Club ATL","Concourse F"],[["pp"],"Poppin Lounge","Concourse F"]],
+ LAX:[["centurion","Centurion Lounge","Tom Bradley International Terminal"]],
+ MIA:[["centurion","Centurion Lounge","Concourse D"]],
+ SFO:[["centurion","Centurion Lounge (temporary)","Terminal 2"],["maple","Air Canada Maple Leaf Lounge","International Terminal"]],
+ SLC:[["centurion","Centurion Lounge","Concourse B"]],
+ SEA:[["centurion","Centurion Lounge","Central Terminal"],[["pp"],"The Club SEA","Concourse A"]],
+ FRA:[["maple","Air Canada Maple Leaf Lounge","Terminal 1"]],
+ LHR:[["maple","Air Canada Maple Leaf Lounge","Terminal 2"]],
+ BWI:[[["pp"],"The Club BWI","Concourse D"]],
+ BDL:[[["escape","pp"],"Escape Lounge","Terminal A"]],
+ BUF:[[["pp"],"The Club BUF","Between Gates 6 and 7"]],
+ CHS:[[["pp"],"The Club CHS","Concourse B"]],
+ MDW:[[["pp"],"The Club MDW","Central Market"]],
+ ORD:[[["pp"],"Air France Lounge","Terminal 5"],[["pp"],"Swissport Lounge","Terminal 5"]],
+ CVG:[[["pp"],"The Club CVG","Concourse A"],[["escape","pp"],"Escape Lounge","Concourse B"]],
+ CLE:[[["pp"],"The Club CLE","Near Concourse B"]],
+ HNL:[[["pp"],"IASS Hawaii Lounge","Overseas Terminal"]],
+ DTW:[[["pp"],"Lufthansa Business Lounge","Evans Terminal"]],
+ GRR:[[["pp"],"The Club GRR","Concourse A"]],
+ GSP:[[["escape","pp"],"Escape Lounge","Concourse B"]],
+ CMH:[[["escape","pp"],"Escape Lounge","Concourse B"]],
+ OGG:[[["pp"],"Hawaiian Airlines Premier Club","Near Gate 15"]],
+ MCO:[[["pp"],"The Club MCO","Terminal A"],[["pp"],"The Club MCO","Terminal B"],[["plaza","pp"],"Plaza Premium Lounge","Terminal C"]],
+ SJU:[[["pp"],"The Lounge San Juan","Terminal A"],[["pp"],"The Lounge San Juan","Terminal C"],[["escape"],"Escape Lounge","Concourse B"]]
+};
+function myProducts(){return PRODUCTS.filter(p=>pcards.has(p.card));}
+function statusFor(key){return myProducts().filter(p=>p.status&&p.status[key]).map(p=>({p,t:p.status[key]}));}
+function loungeHTML(ap){
+  const prods=myProducts(),list=LOUNGE_AT[ap]||[],nets=e=>Array.isArray(e[0])?e[0]:[e[0]];
+  const access=ns=>prods.filter(p=>p.lounges.some(l=>ns.includes(l[0]))).map(p=>{const l=p.lounges.find(x=>ns.includes(x[0]));return p.name+(l[1]?` (${l[1].toLowerCase()})`:"");});
+  const items=list.map(e=>({e,ns:nets(e),who:access(nets(e))})).sort((a,b)=>(b.who.length>0)-(a.who.length>0));
+  const yes=items.filter(x=>x.who.length).length;
+  const rows=items.filter(x=>x.who.length).map(({e,ns,who})=>`<li class="${who.length?"yes":"no"}"><span><b>${esc(e[1])}</b><small>${esc(e[2])}</small></span><i class="ltag">${ns.map(n=>esc(NETS[n].n)).join(" · ")}</i><em>${who.length?"With "+esc(who.join(", ")):"Not with your cards"}</em></li>`).join("");
+  const others=items.filter(x=>!x.who.length).map(({e})=>`${esc(e[1])} (${esc(e[2])})`);
+  const covered=new Set(list.flatMap(e=>nets(e)));
+  const wide=WIDE.filter(n=>n==="pp"&&!covered.has(n)).map(net=>{const who=prods.filter(p=>p.lounges.some(l=>l[0]===net));if(!who.length)return"";
+    const notes=who.map(p=>{const l=p.lounges.find(x=>x[0]===net);return p.name+(l[1]?` (${l[1].toLowerCase()})`:"");});
+    return `<li class="maybe"><span><b>${esc(NETS[net].n)}</b><small>Lounges at ${esc(ap)} may be listed in the app</small></span><em>With ${esc(notes.join(", "))} · <a href="${NETS[net].u}" target="_blank" rel="noopener">Check the app</a></em></li>`;}).join("");
+  const oth=others.length?`<p class="lother">Also here, not with your cards: ${others.join(", ")}</p>`:"";
+  if(!rows&&!wide)return `<p class="hint">No lounges for your cards here.</p>${oth}`;
+  return `${list.length?`<p class="lcount">${yes} lounge${yes===1?"":"s"} open to you</p>`:""}<ul class="lounges">${rows}${wide}</ul>${oth}`;
+}
+function renderSide(el,cat,aps){
+  const prods=myProducts();
+  const label={air:"Travel perks",hotel:"Hotel perks",car:"Rental car perks"}[cat];
+  let html=`<div class="side-card"><h5>${label} with your cards</h5>${prods.map(p=>{const items=p[cat]||[];
+    return `<div class="perk"><div class="perk-h"><b>If you have ${esc(p.name)}</b>${p.fee?`<small>${esc(p.fee)}</small>`:""}</div>${items.length?`<ul>${items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:`<p class="hint">No special ${cat==="air"?"travel":cat==="hotel"?"hotel":"rental car"} perks.</p>`}</div>`;}).join("")}</div>`;
+  const seen=new Set();
+  aps.forEach(a=>{a=(a||"").trim().toUpperCase();if(!a||seen.has(a)||!/^[A-Z]{3}$/.test(a))return;seen.add(a);
+    html+=`<div class="side-card"><h5>Lounges at ${esc(a)}</h5>${loungeHTML(a)}</div>`;});
+  el.innerHTML=html+`<p class="ps-fine">Card perks change often. Check your card's benefits page before you count on one.</p>`;
+}
+const PINS=[
+ {c:"LHR",n:"London",lat:51.5,lon:-0.12},{c:"CDG",n:"Paris",lat:48.86,lon:2.35},{c:"FCO",n:"Rome",lat:41.9,lon:12.5},{c:"BCN",n:"Barcelona",lat:41.39,lon:2.17},
+ {c:"LIS",n:"Lisbon",lat:38.72,lon:-9.14},{c:"ATH",n:"Athens",lat:37.98,lon:23.73},{c:"AMS",n:"Amsterdam",lat:52.37,lon:4.9},{c:"DUB",n:"Dublin",lat:53.35,lon:-6.26},
+ {c:"ZRH",n:"Zurich",lat:47.37,lon:8.54},{c:"IST",n:"Istanbul",lat:41.0,lon:28.98},{c:"KEF",n:"Reykjavík",lat:64.15,lon:-21.94},{c:"CGN",n:"Cologne",lat:50.94,lon:6.96},
+ {c:"DXB",n:"Dubai",lat:25.2,lon:55.27},{c:"DOH",n:"Doha",lat:25.29,lon:51.53},{c:"MLE",n:"Maldives",lat:4.18,lon:73.51},{c:"DEL",n:"Delhi",lat:28.61,lon:77.21},
+ {c:"HND",n:"Tokyo",lat:35.68,lon:139.69},{c:"ICN",n:"Seoul",lat:37.57,lon:126.98},{c:"HKG",n:"Hong Kong",lat:22.32,lon:114.17},{c:"SIN",n:"Singapore",lat:1.35,lon:103.82},
+ {c:"BKK",n:"Bangkok",lat:13.76,lon:100.5},{c:"DPS",n:"Bali",lat:-8.65,lon:115.22},{c:"HAN",n:"Hanoi",lat:21.03,lon:105.85},{c:"PEK",n:"Beijing",lat:39.9,lon:116.4},
+ {c:"SYD",n:"Sydney",lat:-33.87,lon:151.21},{c:"MEL",n:"Melbourne",lat:-37.81,lon:144.96},{c:"AKL",n:"Auckland",lat:-36.85,lon:174.76},
+ {c:"CPT",n:"Cape Town",lat:-33.92,lon:18.42},{c:"NBO",n:"Nairobi",lat:-1.29,lon:36.82},{c:"CAI",n:"Cairo",lat:30.04,lon:31.24},
+ {c:"GRU",n:"São Paulo",lat:-23.55,lon:-46.63},{c:"EZE",n:"Buenos Aires",lat:-34.6,lon:-58.38},{c:"LIM",n:"Lima",lat:-12.05,lon:-77.04},{c:"BOG",n:"Bogotá",lat:4.71,lon:-74.07},
+ {c:"CUN",n:"Cancún",lat:21.16,lon:-86.85},{c:"SJD",n:"Los Cabos",lat:23.05,lon:-109.7},{c:"SJO",n:"Costa Rica",lat:9.93,lon:-84.08},{c:"PUJ",n:"Punta Cana",lat:18.58,lon:-68.4},
+ {c:"HNL",n:"Honolulu",lat:21.31,lon:-157.86},{c:"LAX",n:"Los Angeles",lat:34.05,lon:-118.24},{c:"SFO",n:"San Francisco",lat:37.77,lon:-122.42},{c:"LAS",n:"Las Vegas",lat:36.17,lon:-115.14},
+ {c:"SEA",n:"Seattle",lat:47.61,lon:-122.33},{c:"DEN",n:"Denver",lat:39.74,lon:-104.99},{c:"ORD",n:"Chicago",lat:41.88,lon:-87.63},{c:"MCO",n:"Orlando",lat:28.54,lon:-81.38},
+ {c:"MIA",n:"Miami",lat:25.76,lon:-80.19},{c:"JFK",n:"New York",lat:40.71,lon:-74.0},{c:"BUF",n:"Niagara Falls",lat:43.08,lon:-79.07},{c:"YVR",n:"Vancouver",lat:49.28,lon:-123.12}
+];
+const CITY={};PINS.forEach(p=>CITY[p.c]=p.n);
+Object.assign(CITY,{BUF:"Buffalo",LGA:"New York",EWR:"New York",LGW:"London",ORY:"Paris",NRT:"Tokyo",KIX:"Osaka",FRA:"Frankfurt",MUC:"Munich",MAD:"Madrid",HNL:"Honolulu",OGG:"Maui",BOS:"Boston",ATL:"Atlanta",DFW:"Dallas",IAH:"Houston",PHX:"Phoenix",SAN:"San Diego",IAD:"Washington",DCA:"Washington",AUH:"Abu Dhabi",BOM:"Mumbai",PVG:"Shanghai",TPE:"Taipei",MNL:"Manila",HKT:"Phuket",BNE:"Brisbane",YYZ:"Toronto",YUL:"Montreal",MEX:"Mexico City",PVR:"Puerto Vallarta",SJU:"San Juan",MBJ:"Montego Bay",NAS:"Nassau",AUA:"Aruba",SCL:"Santiago",GIG:"Rio de Janeiro",MXP:"Milan",VCE:"Venice",NCE:"Nice",EDI:"Edinburgh",CPH:"Copenhagen",PRG:"Prague",VIE:"Vienna",BUD:"Budapest",JNB:"Johannesburg",MRU:"Mauritius",PPT:"Tahiti",NAN:"Fiji",ZQN:"Queenstown"});
+/* ---------- points search ---------- */
+const CARDS=[
+  {id:"c1",name:"Capital One",sub:"Venture X · Venture · Spark",unit:"Capital One miles"},
+  {id:"chase",name:"Chase",sub:"Sapphire Reserve · Preferred · Ink",unit:"Chase points"},
+  {id:"amex",name:"Amex",sub:"Platinum · Gold · Business",unit:"Amex points"},
+  {id:"citi",name:"Citi",sub:"Strata Premier · Strata Elite",unit:"Citi points"},
+  {id:"bilt",name:"Bilt",sub:"Bilt cards",unit:"Bilt points"},
+  {id:"wf",name:"Wells Fargo",sub:"Autograph · Autograph Journey",unit:"Wells Fargo points"},
+  {id:"usb",name:"U.S. Bank",sub:"Altitude Reserve (no longer offered)",unit:"U.S. Bank points"},
+  {id:"mb",name:"Marriott Bonvoy",sub:"Ritz-Carlton · Bonvoy cards",unit:"Marriott Bonvoy points"}
+];
+/* program: name, alliance, url, card ratios (1 = 1:1; 0.75 = 1,000 card points become 750 miles) */
+const PROGS={
+  aeroplan:{n:"Air Canada Aeroplan",a:"Star Alliance",u:"https://www.aircanada.com/aeroplan",r:{mb:0.3333,mb:0.4167,c1:1,chase:1,amex:1,bilt:1}},
+  lifemiles:{n:"Avianca LifeMiles",a:"Star Alliance",u:"https://www.lifemiles.com",r:{mb:0.3333,wf:1,usb:1,c1:1,amex:1,citi:1,bilt:1}},
+  turkish:{n:"Turkish Miles&Smiles",a:"Star Alliance",u:"https://www.turkishairlines.com/en-us/miles-and-smiles/",r:{mb:0.4167,c1:1,citi:1,bilt:1}},
+  united:{n:"United MileagePlus",a:"Star Alliance",u:"https://www.united.com",r:{mb:0.5,chase:1,bilt:1}},
+  singapore:{n:"Singapore KrisFlyer",a:"Star Alliance",u:"https://www.singaporeair.com/en_UK/us/ppsclub-krisflyer/",r:{mb:0.4167,c1:1,chase:1,amex:1,citi:1}},
+  eva:{n:"EVA Infinity MileageLands",a:"Star Alliance",u:"https://www.evaair.com",r:{c1:0.75,citi:1}},
+  flyingblue:{n:"Air France-KLM Flying Blue",a:"SkyTeam",u:"https://www.flyingblue.us",r:{mb:0.4167,wf:1,usb:1,c1:1,chase:1,amex:1,citi:1,bilt:1}},
+  virgin:{n:"Virgin Atlantic Flying Club",a:"SkyTeam partner",u:"https://www.virginatlantic.com",r:{mb:0.4167,c1:1,chase:1,amex:1,citi:1,bilt:1,wf:1},via:{c1:"via Virgin Red",wf:"via Virgin Red"}},
+  delta:{n:"Delta SkyMiles",a:"SkyTeam",u:"https://www.delta.com",r:{amex:1}},
+  aeromexico:{n:"Aeromexico Rewards",a:"SkyTeam",u:"https://www.aeromexico.com",r:{mb:0.4167,c1:1,amex:1.6}},
+  ba:{n:"British Airways Club (Avios)",a:"oneworld",u:"https://www.britishairways.com",r:{mb:0.4167,wf:1,c1:1,chase:1,amex:1,bilt:1}},
+  iberia:{n:"Iberia Club (Avios)",a:"oneworld",u:"https://www.iberia.com",r:{mb:0.4167,chase:1,amex:1,bilt:1,c1:1,wf:1},via:{c1:"via British Airways, then move Avios"}},
+  aerlingus:{n:"Aer Lingus AerClub (Avios)",a:"Avios partner",u:"https://www.aerlingus.com",r:{mb:0.4167,chase:1,amex:1,bilt:1,c1:1,wf:1},via:{c1:"via British Airways, then move Avios"}},
+  qatar:{mb:0.4167,n:"Qatar Privilege Club (Avios)",a:"oneworld",u:"https://www.qatarairways.com",r:{c1:1,amex:1,citi:1,bilt:1,chase:1,wf:1},via:{chase:"via British Airways, then move Avios",wf:"via British Airways, then move Avios"}},
+  aa:{n:"American AAdvantage",a:"oneworld",u:"https://www.aa.com",r:{mb:0.3333,citi:1}},
+  atmos:{n:"Alaska Atmos Rewards",a:"oneworld",u:"https://www.alaskaair.com",r:{mb:0.4167,bilt:1}},
+  jal:{n:"JAL Mileage Bank",a:"oneworld",u:"https://www.jal.co.jp/jp/en/jmb/",r:{mb:0.4167,c1:0.75,citi:1,bilt:1}},
+  cathay:{n:"Cathay Pacific Asia Miles",a:"oneworld",u:"https://www.cathaypacific.com",r:{mb:0.4167,wf:1,c1:1,amex:0.8,citi:1,bilt:1}},
+  qantas:{n:"Qantas Frequent Flyer",a:"oneworld",u:"https://www.qantas.com",r:{mb:0.4167,usb:1,c1:1,amex:1,citi:1}},
+  emirates:{n:"Emirates Skywards",a:"Independent",u:"https://www.emirates.com",r:{mb:0.4167,c1:0.75,amex:0.8,citi:0.8,bilt:1}},
+  etihad:{n:"Etihad Guest",a:"Independent",u:"https://www.etihad.com",r:{mb:0.4167,c1:1,citi:1,bilt:1}},
+  tap:{n:"TAP Miles&Go",a:"Star Alliance",u:"https://www.flytap.com",r:{mb:0.4167,c1:1,bilt:1}},
+  southwest:{n:"Southwest Rapid Rewards",a:"Independent",u:"https://www.southwest.com",r:{mb:0.4167,chase:1,bilt:1}},
+  jetblue:{n:"JetBlue TrueBlue",a:"Independent",u:"https://www.jetblue.com",r:{wf:1,c1:0.6,chase:1,amex:0.8,citi:1,bilt:1}}
+};
+/* options per region: p program, fly airlines, e/b/f = one-way miles [low, high], fe/fb = taxes & fees USD [low, high] (fb also used for first), n = note */
+const S=6, LM="No fuel surcharges.", AC="Includes Aeroplan's ~$30 partner booking fee.";
+const ROUTES={
+ dom:[
+  {p:"united",fly:"United",e:[5000,15000],b:[15000,40000],fe:[S,S],n:"Dynamic pricing. Saver seats are cheapest."},
+  {p:"aeroplan",fly:"United, Air Canada",e:[6000,22500],b:[15000,35000],fe:[35,45],n:"Priced by distance. "+AC},
+  {p:"lifemiles",fly:"United",e:[6500,12500],b:[15000,27500],fe:[30,40],n:"Adds a $25 booking fee."},
+  {p:"turkish",fly:"United",e:[15000,15000],b:[22500,22500],fe:[S,15],n:"Hard to book online. You may need to call."},
+  {p:"ba",fly:"American, Alaska",e:[7500,16500],b:[15000,33000],fe:[S,S],n:"Priced by distance. Great for short nonstops."},
+  {p:"aa",fly:"American",e:[7500,20000],b:[15000,40000],fe:[S,S],n:"Dynamic pricing."},
+  {p:"atmos",fly:"Alaska, American",e:[4500,20000],b:[15000,40000],fe:[S,S]},
+  {p:"delta",fly:"Delta",e:[5000,30000],b:[15000,60000],fe:[S,S],n:"Fully dynamic pricing."},
+  {p:"virgin",fly:"Delta",e:[5000,12500],fe:[S,S],n:"Economy only through Virgin."},
+  {p:"southwest",fly:"Southwest",e:[3000,25000],fe:[S,S],n:"Price follows the cash fare."},
+  {p:"jetblue",fly:"JetBlue",e:[5000,30000],b:[30000,90000],fe:[S,S],n:"Price follows the cash fare. Business is Mint."}
+ ],
+ hi:[
+  {p:"united",fly:"United",e:[12500,25000],b:[25000,60000],fe:[S,S]},
+  {p:"aeroplan",fly:"United",e:[12500,22500],b:[25000,40000],fe:[35,45],n:AC},
+  {p:"lifemiles",fly:"United",e:[15000,22500],b:[27500,35000],fe:[30,40],n:"Adds a $25 booking fee."},
+  {p:"turkish",fly:"United",e:[25000,25000],b:[40000,40000],fe:[S,15],n:"Hard to book online. You may need to call."},
+  {p:"ba",fly:"American, Alaska",e:[13000,18500],b:[26000,37000],fe:[S,S],n:"Priced by distance. West Coast is cheapest."},
+  {p:"atmos",fly:"Alaska, Hawaiian",e:[7500,25000],b:[25000,60000],fe:[S,S]},
+  {p:"aa",fly:"American",e:[12500,25000],b:[25000,50000],fe:[S,S]},
+  {p:"delta",fly:"Delta",e:[15000,45000],b:[50000,120000],fe:[S,S],n:"Fully dynamic pricing."},
+  {p:"southwest",fly:"Southwest",e:[7000,25000],fe:[S,S],n:"Price follows the cash fare."}
+ ],
+ mx:[
+  {p:"aeroplan",fly:"United, Copa, Air Canada",e:[12500,22500],b:[25000,40000],fe:[60,140],n:AC},
+  {p:"lifemiles",fly:"United, Avianca, Copa",e:[12500,25000],b:[25000,45000],fe:[50,130],n:LM},
+  {p:"united",fly:"United",e:[10000,25000],b:[20000,50000],fe:[30,120]},
+  {p:"turkish",fly:"United",e:[30000,30000],b:[40000,40000],fe:[40,120]},
+  {p:"ba",fly:"American, Alaska",e:[9000,16500],b:[18000,33000],fe:[40,120],n:"Priced by distance. Short flights from Miami or Dallas are cheapest."},
+  {p:"aa",fly:"American",e:[10000,25000],b:[20000,50000],fe:[30,120]},
+  {p:"atmos",fly:"Alaska, American",e:[7500,20000],b:[20000,40000],fe:[30,120]},
+  {p:"delta",fly:"Delta",e:[8000,35000],b:[36000,92000],fe:[30,120],n:"Fully dynamic pricing."},
+  {p:"flyingblue",fly:"Delta",e:[15000,40000],b:[40000,80000],fe:[30,120]},
+  {p:"aeromexico",fly:"Aeromexico (Mexico)",e:[10000,30000],b:[25000,60000],fe:[60,150],n:"Best for Mexico routes."},
+  {p:"southwest",fly:"Southwest",e:[6000,25000],fe:[30,120],n:"Price follows the cash fare."},
+  {p:"jetblue",fly:"JetBlue",e:[6000,30000],b:[25000,60000],fe:[30,120],n:"Price follows the cash fare."}
+ ],
+ sa:[
+  {p:"lifemiles",fly:"Avianca, Copa, United",e:[25000,35000],b:[50000,65000],fe:[50,150],n:LM},
+  {p:"aeroplan",fly:"United, Copa, Air Canada",e:[30000,45000],b:[55000,75000],fe:[60,160],n:AC},
+  {p:"united",fly:"United",e:[20000,40000],b:[50000,80000],fe:[40,150]},
+  {p:"atmos",fly:"LATAM, American",e:[20000,30000],b:[40000,55000],fe:[50,150]},
+  {p:"ba",fly:"American, LATAM",e:[25000,35000],b:[50000,75000],fe:[50,150]},
+  {p:"aa",fly:"American, LATAM",e:[20000,40000],b:[57500,80000],fe:[50,150]},
+  {p:"flyingblue",fly:"Delta, Air France",e:[20000,50000],b:[55000,100000],fe:[50,200]},
+  {p:"delta",fly:"Delta, LATAM",e:[25000,80000],b:[135000,350000],fe:[50,150],n:"Fully dynamic pricing."},
+  {p:"turkish",fly:"United, Avianca, Copa",e:[90000,90000],b:[140000,140000],fe:[50,150]}
+ ],
+ eu:[
+  {p:"lifemiles",fly:"Lufthansa, Swiss, United, TAP, Turkish",e:[35000,45000],b:[63000,80000],f:[87000,120000],fe:[50,130],n:LM+" Adds a $25 booking fee."},
+  {p:"aeroplan",fly:"Lufthansa, Swiss, United, Air Canada",e:[42500,60000],b:[75000,90000],f:[120000,150000],fe:[80,200],n:AC+" Lufthansa first opens close to departure."},
+  {p:"turkish",fly:"Turkish, United, Lufthansa",e:[50000,55000],b:[85000,90000],fe:[60,250],n:"Turkish-operated flights add about $200–250."},
+  {p:"united",fly:"United, Lufthansa, Swiss",e:[30000,60000],b:[60000,120000],fe:[40,150]},
+  {p:"singapore",fly:"United, Lufthansa, Swiss",e:[47000,55000],b:[89500,105000],f:[133500,172000],fe:[60,400],n:"Passes on fuel surcharges for some partners."},
+  {p:"flyingblue",fly:"Air France, KLM, Delta",e:[25000,55000],b:[55000,90000],fe:[150,400],n:"Watch for monthly Promo Rewards discounts."},
+  {p:"virgin",fly:"Delta, Air France, KLM",e:[22500,30000],b:[50000,50000],fe:[50,150],n:"No surcharges on Delta flights."},
+  {p:"virgin",fly:"Virgin Atlantic",e:[20000,40000],b:[47500,100000],fe:[200,450],fb:[400,900],n:"Virgin-operated flights add high surcharges."},
+  {p:"aerlingus",fly:"Aer Lingus",e:[13000,25000],b:[50000,75000],fe:[100,250],n:"Off-peak dates from the East Coast are the sweet spot."},
+  {p:"iberia",fly:"Iberia",e:[17000,34000],b:[40500,59000],fe:[150,300],n:"Off-peak business to Madrid is a classic deal."},
+  {p:"atmos",fly:"American, British Airways, Finnair",e:[22500,27500],b:[55000,57500],f:[70000,90000],fe:[50,300]},
+  {p:"aa",fly:"American, Finnair, Iberia",e:[30000,40000],b:[57500,80000],fe:[S,150]},
+  {p:"tap",fly:"TAP Air Portugal",e:[22000,35000],b:[55000,85000],fe:[100,250]},
+  {p:"ba",fly:"British Airways",e:[27500,33000],b:[88000,99000],f:[75000,102000],fe:[250,450],fb:[500,900],n:"BA adds high carrier charges. Aer Lingus or Iberia Avios usually cost less."},
+  {p:"delta",fly:"Delta",e:[28000,76000],b:[170000,360000],fe:[S,150],n:"Fully dynamic pricing."}
+ ],
+ me:[
+  {p:"qatar",fly:"Qatar Airways (Qsuites)",e:[35000,45000],b:[70000,90000],fe:[100,300],n:"Off-peak dates are cheapest. Avios move freely between BA and Qatar."},
+  {p:"lifemiles",fly:"Turkish, United, Lufthansa",e:[42000,55000],b:[78000,90000],fe:[50,130],n:LM},
+  {p:"atmos",fly:"Qatar, Emirates",e:[32500,40000],b:[62500,70000],f:[100000,100000],fe:[150,300]},
+  {p:"aa",fly:"Qatar, American",e:[40000,57500],b:[70000,100000],fe:[100,300]},
+  {p:"aeroplan",fly:"Turkish, United, Etihad",e:[60000,75000],b:[90000,110000],f:[150000,165000],fe:[80,200],n:AC},
+  {p:"turkish",fly:"Turkish",e:[58000,58000],b:[93000,93000],fe:[60,250]},
+  {p:"united",fly:"United, Turkish",e:[42500,60000],b:[77000,120000],fe:[40,150]},
+  {p:"etihad",fly:"Etihad",e:[45000,60000],b:[88000,120000],f:[110000,160000],fe:[100,250]},
+  {p:"flyingblue",fly:"Air France, KLM",e:[30000,55000],b:[60000,100000],fe:[150,400]},
+  {p:"emirates",fly:"Emirates",e:[45000,72500],b:[110000,150000],f:[150000,200000],fe:[300,600],fb:[500,900],n:"High carrier surcharges."}
+ ],
+ af:[
+  {p:"lifemiles",fly:"Ethiopian, Turkish, United",e:[42000,55000],b:[78000,90000],fe:[50,130],n:LM},
+  {p:"qatar",fly:"Qatar Airways via Doha",e:[40000,55000],b:[80000,100000],fe:[100,300]},
+  {p:"aa",fly:"Qatar, British Airways",e:[37500,60000],b:[75000,90000],fe:[100,400]},
+  {p:"aeroplan",fly:"Ethiopian, United, Lufthansa",e:[60000,75000],b:[90000,110000],fe:[80,200],n:AC},
+  {p:"united",fly:"United, Ethiopian",e:[45000,60000],b:[80000,120000],fe:[40,200]},
+  {p:"flyingblue",fly:"Air France, KLM, Delta",e:[35000,70000],b:[65000,110000],fe:[150,400]},
+  {p:"emirates",fly:"Emirates via Dubai",e:[50000,80000],b:[120000,160000],fe:[300,600],fb:[500,900],n:"High carrier surcharges."}
+ ],
+ na:[
+  {p:"virgin",fly:"ANA",b:[52500,60000],f:[72500,85000],fe:[50,200],n:"West Coast is cheaper than the East Coast. ANA first is a famous sweet spot."},
+  {p:"atmos",fly:"Japan Airlines",e:[25000,35000],b:[60000,75000],f:[70000,85000],fe:[50,80],n:"JAL awards carry low taxes and no fuel surcharges."},
+  {p:"aa",fly:"Japan Airlines, American",e:[35000,45000],b:[60000,80000],f:[80000,110000],fe:[50,100]},
+  {p:"jal",fly:"Japan Airlines",e:[35000,60000],b:[60000,120000],f:[80000,160000],fe:[50,250],n:"Prices vary by date."},
+  {p:"lifemiles",fly:"ANA, United, EVA",e:[40000,47000],b:[85000,90000],f:[110000,120000],fe:[50,130],n:LM},
+  {p:"aeroplan",fly:"ANA, United, Air Canada",e:[55000,65000],b:[85000,102500],f:[120000,140000],fe:[80,200],n:AC},
+  {p:"united",fly:"United, ANA",e:[35000,60000],b:[70000,120000],fe:[40,150]},
+  {p:"flyingblue",fly:"Delta, Korean Air",e:[30000,65000],b:[65000,110000],fe:[50,200]},
+  {p:"turkish",fly:"ANA, United",e:[75000,75000],b:[130000,130000],fe:[50,150]},
+  {p:"delta",fly:"Delta, Korean Air",e:[32000,85000],b:[175000,400000],fe:[50,150],n:"Fully dynamic pricing."}
+ ],
+ sea:[
+  {p:"atmos",fly:"Cathay Pacific, JAL",e:[25000,35000],b:[50000,70000],f:[70000,85000],fe:[50,250]},
+  {p:"aa",fly:"Cathay Pacific, JAL",e:[40000,45000],b:[70000,80000],f:[110000,110000],fe:[50,250]},
+  {p:"cathay",fly:"Cathay Pacific",e:[38000,45000],b:[85000,119000],f:[125000,160000],fe:[50,200]},
+  {p:"eva",fly:"EVA Air",e:[35000,50000],b:[75000,95000],fe:[50,150]},
+  {p:"lifemiles",fly:"EVA, Singapore, United",e:[42000,50000],b:[90000,100000],f:[120000,130000],fe:[50,130],n:LM},
+  {p:"aeroplan",fly:"EVA, ANA, United, Singapore",e:[65000,70000],b:[102500,110000],f:[140000,160000],fe:[80,200],n:AC},
+  {p:"singapore",fly:"Singapore Airlines",e:[48000,60000],b:[117000,117000],f:[156000,156000],fe:[50,200],n:"Saver price on Singapore's own flights."},
+  {p:"united",fly:"United, EVA, ANA",e:[35000,60000],b:[75000,120000],fe:[40,150]},
+  {p:"flyingblue",fly:"Delta, Korean Air, China Airlines",e:[30000,65000],b:[65000,120000],fe:[100,300]},
+  {p:"turkish",fly:"EVA, ANA, Singapore",e:[75000,75000],b:[130000,130000],fe:[50,150]},
+  {p:"delta",fly:"Delta, Korean Air",e:[32000,85000],b:[175000,400000],fe:[50,150],n:"Fully dynamic pricing."}
+ ],
+ oc:[
+  {p:"atmos",fly:"Qantas",e:[30000,40000],b:[55000,60000],f:[80000,80000],fe:[100,250],n:"Seats open about 11 months out and go fast."},
+  {p:"aa",fly:"Qantas, American",e:[40000,40000],b:[80000,80000],f:[110000,110000],fe:[100,250]},
+  {p:"united",fly:"United",e:[40000,80000],b:[80000,150000],fe:[40,150],n:"Saver seats sometimes open 2–3 weeks before departure."},
+  {p:"lifemiles",fly:"United, Air New Zealand",e:[45000,55000],b:[90000,100000],fe:[50,130],n:LM},
+  {p:"aeroplan",fly:"United, Air New Zealand, Air Canada",e:[65000,75000],b:[85000,110000],fe:[80,200],n:AC},
+  {p:"qantas",fly:"Qantas",e:[58900,63500],b:[108000,166300],f:[227800,249400],fe:[100,300],n:"Free stopover allowed."},
+  {p:"turkish",fly:"United, Air New Zealand",e:[100000,100000],b:[205000,205000],fe:[50,150]},
+  {p:"delta",fly:"Delta",e:[50000,125000],b:[280000,430000],fe:[50,150],n:"Fully dynamic pricing."}
+ ]
+};
+const REGIONS={dom:"United States & Canada",hi:"Hawaii",mx:"Mexico, Caribbean & Central America",sa:"South America",eu:"Europe",me:"Middle East & India",af:"Africa",na:"Japan & Korea",sea:"China, Hong Kong & Southeast Asia",oc:"Australia & New Zealand"};
+const AP={};
+const addAP=(r,s)=>s.split(" ").forEach(c=>AP[c]=r);
+addAP("dom","ATL BOS ORD MDW DFW DAL DEN IAH HOU LAX SFO SJC OAK SAN SEA PDX PHX LAS SLC MSP DTW CLT PHL EWR JFK LGA IAD DCA BWI MIA FLL TPA MCO MSY BNA AUS SAT RDU STL MCI CLE PIT CMH IND MKE BUF SMF ANC RSW PBI JAX CHS SAV RIC ORF ABQ TUS BOI OMA DSM CVG SDF MEM OKC TUL BDL PVD ALB SYR ROC BUR ONT SNA LGB PSP YYZ YVR YUL YYC YOW YEG YHZ");
+addAP("hi","HNL OGG KOA LIH ITO");
+addAP("mx","CUN MEX GDL SJD PVR CZM MTY OAX SJU MBJ KIN NAS PUJ SDQ AUA CUR SXM STT STX GCM BGI ANU UVF PLS BDA SJO LIR PTY BZE RTB GUA SAL MGA HAV");
+addAP("sa","BOG MDE CTG CLO LIM CUZ SCL EZE AEP GRU GIG BSB UIO GYE MVD ASU LPB CCS");
+addAP("eu","LHR LGW STN MAN EDI DUB SNN CDG ORY NCE AMS FRA MUC DUS CGN BER HAM ZRH GVA VIE FCO MXP LIN VCE NAP FLR MAD BCN AGP PMI LIS OPO ATH IST SAW CPH ARN OSL HEL BRU PRG BUD WAW KRK KEF SPU DBV LCA MLA");
+addAP("me","DXB AUH DOH TLV AMM RUH JED BAH KWI MCT DEL BOM BLR MAA HYD CCU COK MLE CMB KTM");
+addAP("af","CPT JNB NBO CAI CMN RAK ADD LOS ACC ZNZ JRO MRU SEZ DAR KGL DKR TUN");
+addAP("na","NRT HND KIX NGO FUK CTS OKA ICN GMP PUS");
+addAP("sea","HKG MFM TPE PVG PEK PKX CAN CTU SZX SIN BKK DMK HKT CNX KUL PEN SGN HAN DAD MNL CEB DPS CGK PNH REP RGN");
+addAP("oc","SYD MEL BNE PER ADL OOL CNS AKL CHC ZQN WLG NAN PPT");
+DESTS.forEach(d=>{if(!AP[d.code])AP[d.code]=AP[d.to];});
+AP.CGN="eu";AP.HAN="sea";AP.PEK="sea";AP.SYD="oc";AP.MCO="dom";AP.BUF="dom";AP.JFK="dom";
+
+let mcLegs=[];
+function legRows(f,t){
+  const reg=regionFor(t),fr=regionFor(f);
+  if(!reg)return{err:`We don't have prices for ${t} yet. Try a nearby major airport.`};
+  if(fr&&!["dom","hi"].includes(fr))return{err:"Prices here are for flights that start in the US or Canada."};
+  const useReg=(fr==="hi"&&reg==="dom")?"hi":reg,cab=pcabin,rows=[];
+  (ROUTES[useReg]||[]).forEach(o=>{const m=o[cab];if(!m)return;const P=PROGS[o.p];let best=null;
+    pcards.forEach(cid=>{const r=P.r[cid];if(!r)return;const lo=cardPts(m[0],r),hi=cardPts(m[1],r);if(!best||lo<best.lo)best={cid,r,lo,hi};});
+    if(best)rows.push({o,P,best,m,fees:cab==="e"?o.fe:(o.fb||o.fe)});});
+  rows.sort((a,b)=>a.best.lo-b.best.lo||a.fees[0]-b.fees[0]);
+  return{rows};
+}
+function presMini(x,i,mult){
+  const c=CARDS.find(cc=>cc.id===x.best.cid),via=(x.P.via&&x.P.via[x.best.cid])||"";
+  return `<article class="pres${i===0?" first":""}"><div class="pr-main"><div class="pr-tags">${i===0?'<span class="pr-badge">Lowest points</span>':""}<span class="pr-all">${esc(x.P.a)}</span></div>
+    <h4>${esc(x.o.fly)}</h4><p class="pr-prog">Book with <b>${esc(x.P.n)}</b></p><p class="pr-xfer">Transfer from ${esc(c.name)} at ${ratioTxt(x.best.r)}${via?` (${esc(via)})`:""}</p>${x.o.n?`<p class="pr-note">${esc(x.o.n)}</p>`:""}</div>
+    <div class="pr-cost"><div class="pr-pts"><b>${rng(x.best.lo*mult,x.best.hi*mult)}</b><small>${esc(c.unit)}</small></div><div class="pr-fee">+ ${rng(x.fees[0]*mult,x.fees[1]*mult,usd)} <small>taxes &amp; fees</small></div>
+    <div class="pr-acts"><a class="btn small" href="${x.P.u}" target="_blank" rel="noopener">Check seats</a></div></div></article>`;
+}
+function tripStops(from,to){
+  let s=[from,to];if(pTrip==="mc")mcLegs.forEach(l=>{s.push(l.from,l.to);});
+  s=s.map(x=>(x||"").trim().toUpperCase()).filter(x=>/^[A-Z]{3}$/.test(x));
+  return s.filter((x,i)=>i===0||x!==s[i-1]).filter((x,i,a)=>pTrip==="rt"?a.indexOf(x)===i:true);
+}
+function renderTripLounges(from,to){
+  const stops=tripStops(from,to),el=$("fl-lounges");if(!el)return;
+  if(!stops.length){el.innerHTML="";return;}
+  el.innerHTML=`<div class="rl"><div class="rl-h"><h4>Lounges on your trip</h4><small>With the cards you picked</small></div><div class="rl-stops">${stops.map((ap,i)=>`<div class="rl-stop"><div class="rl-code"><b>${esc(ap)}</b><small>${esc(CITY[ap]||"")}${i===0?" · Departing":i===stops.length-1&&pTrip!=="rt"?" · Arriving":pTrip==="mc"?" · Connecting":""}</small></div>${loungeHTML(ap)}</div>`).join("")}</div></div>`;
+}
+function renderMulti(from,to){
+  const pax=Math.max(1,+$("ps-pax").value||1),legs=[{from,to},...mcLegs];
+  $("ps-summary").innerHTML=`<div><small>Multi-city · ${legs.length} flights · ${pax} traveler${pax>1?"s":""}</small><b>${legs.length} flights on your trip</b></div>`;
+  $("ps-results").innerHTML=legs.map((L,li)=>{const f=(L.from||"").trim().toUpperCase(),t=(L.to||"").trim().toUpperCase();
+    const head=`<div class="leg-h"><span class="leg-n">Flight ${li+1}</span><b>${esc(f||"…")} → ${esc(t||"…")}</b><small>${esc(CITY[t]||"")}</small>`;
+    if(!f||!t)return `<div class="leg">${head}</div><div class="ps-empty">Add both airports for this flight.</div></div>`;
+    const R=legRows(f,t);
+    if(R.err)return `<div class="leg">${head}</div><div class="ps-empty">${esc(R.err)}</div></div>`;
+    if(!R.rows.length)return `<div class="leg">${head}</div><div class="ps-empty">None of your cards' partners publish prices for this flight in this cabin.</div></div>`;
+    const b=R.rows[0];
+    return `<div class="leg">${head}<span class="leg-best">From ${fk(b.best.lo*pax)} ${esc(CARDS.find(c=>c.id===b.best.cid).unit)}</span></div><div class="ps-results" id="leg-${li}">${R.rows.map((x,i)=>presMini(x,i,pax)).join("")}</div></div>`;}).join("");
+  legs.forEach((_,li)=>{if($("leg-"+li))clampList("leg-"+li,3,"options");});
+}
+function renderLegs(){
+  const box=$("mc-legs");
+  box.innerHTML=mcLegs.map((L,i)=>`<div class="mc-leg"><span class="mc-n">Flight ${i+2}</span><label>From<input class="code" list="airports" maxlength="4" data-i="${i}" data-f="from" value="${esc(L.from)}" autocomplete="off"></label><label>To<input class="code" list="airports" maxlength="4" data-i="${i}" data-f="to" value="${esc(L.to)}" autocomplete="off"></label><button type="button" class="x" data-rm="${i}" aria-label="Remove flight ${i+2}">×</button></div>`).join("")+(mcLegs.length<4?`<button type="button" class="mc-add" id="mc-add">+ Add another flight</button>`:"");
+  box.querySelectorAll("input").forEach(inp=>inp.addEventListener("input",()=>{mcLegs[+inp.dataset.i][inp.dataset.f]=inp.value.trim().toUpperCase();runSearch();}));
+  box.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{mcLegs.splice(+b.dataset.rm,1);if(!mcLegs.length){pTrip="ow";document.querySelectorAll("#ps-trip button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v==="ow"));box.hidden=true;}renderLegs();runSearch();});
+  const add=$("mc-add");if(add)add.onclick=()=>{const last=mcLegs.length?mcLegs[mcLegs.length-1].to:$("ps-to").value.trim().toUpperCase();mcLegs.push({from:last,to:""});renderLegs();runSearch();const ins=box.querySelectorAll('input[data-f="to"]');ins[ins.length-1].focus();};
+}
+let pcards=new Set(["c1"]),pcabin="b",pTrip="ow";const flSel=new Set();
+const FLYFIX={"TAP":"TAP Air Portugal","JAL":"Japan Airlines","EVA Air":"EVA","Singapore":"Singapore Airlines","Qatar":"Qatar Airways"};
+function flyList(f){return f.split(", ").map(a=>a.replace(/\s*\(.*\)$/,"").replace(/ via .*$/,"").trim()).map(a=>FLYFIX[a]||a);}
+function fk(n){if(n>=1e6)return(n/1e6).toFixed(2).replace(/\.?0+$/,"")+"M";if(n>=1000){const k=n/1000;return(k%1?k.toFixed(1).replace(/\.0$/,""):k)+"K";}return String(n);}
+function rng(a,b,f=fk){return a===b?f(a):`${f(a)}–${f(b)}`;}
+function usd(n){return "$"+Math.round(n).toLocaleString();}
+function cardPts(miles,r){return Math.ceil(miles/r/1000)*1000;}
+function ratioTxt(r){if(r===0.4167)return"3:1, plus 5K bonus per 60K";if(r===0.5)return"3:1, plus 10K bonus per 60K";if(r===0.3333)return"3:1";if(r===1)return"1:1";if(r===0.75)return"2:1.5";if(r===0.8)return"5:4";if(r===0.6)return"5:3";if(r===1.6)return"1:1.6";return"1:"+r;}
+
+function renderCardPicker(){
+  const html=CARDS.map(c=>`<button type="button" class="pcard${pcards.has(c.id)?" on":""}" data-c="${c.id}" aria-pressed="${pcards.has(c.id)}"><span class="pc-chip" aria-hidden="true"></span><b>${c.name}</b><small>${c.sub}</small><i class="pc-check" aria-hidden="true">✓</i></button>`).join("");
+  document.querySelectorAll(".pcards-host").forEach(h=>{h.innerHTML=html;h.querySelectorAll(".pcard").forEach(b=>b.onclick=()=>{const id=b.dataset.c;if(pcards.has(id)){if(pcards.size>1)pcards.delete(id);}else pcards.add(id);renderCardPicker();runSearch();if(window.__stay)window.__stay();});});
+}
+function regionFor(code){return AP[(code||"").trim().toUpperCase()]||null;}
+function runSearch(){runSearchCore();if(window.__ready)afterSearch();}
+function runSearchCore(){
+  const from=$("ps-from").value.trim().toUpperCase(),to=$("ps-to").value.trim().toUpperCase();
+  const pickR=$("ps-region").value;
+  const reg=regionFor(to)||pickR||null;
+  const fromReg=regionFor(from);
+  $("ps-regnote").textContent=to&&!regionFor(to)?(pickR?"":"We don't know that airport yet. Pick a region below."):(reg&&to?REGIONS[reg]:"");
+  const out=$("ps-results"),sum=$("ps-summary");
+  renderSide($("fl-side"),"air",[]);$("ps-filter").innerHTML="";renderTripLounges(from,to);
+  if(pTrip==="mc"){renderMulti(from,to);return;}
+  const pax=Math.max(1,+$("ps-pax").value||1),mult=pax*(pTrip==="rt"?2:1);
+  if(!reg){sum.innerHTML="";out.innerHTML=`<div class="ps-empty">Enter where you're going to see every airline your points can book.</div>`;return;}
+  if(fromReg&&!["dom","hi"].includes(fromReg)){sum.innerHTML="";out.innerHTML=`<div class="ps-empty">Prices here are for trips that start in the US or Canada. </div>`;return;}
+  if(reg==="dom"&&fromReg==="hi"){/* Hawaii to mainland uses Hawaii prices */}
+  const useReg=(fromReg==="hi"&&reg==="dom")?"hi":reg;
+  const cab=pcabin;
+  let rows=[];
+  (ROUTES[useReg]||[]).forEach(o=>{
+    const m=o[cab];if(!m)return;
+    const P=PROGS[o.p];
+    let best=null;
+    pcards.forEach(cid=>{const r=P.r[cid];if(!r)return;const lo=cardPts(m[0],r),hi=cardPts(m[1],r);if(!best||lo<best.lo)best={cid,r,lo,hi};});
+    if(!best)return;
+    const fees=(cab==="e"?o.fe:(o.fb||o.fe));
+    rows.push({o,P,best,m,fees});
+  });
+  rows.sort((a,b)=>a.best.lo-b.best.lo||a.fees[0]-b.fees[0]);
+  const airs={};rows.forEach(x=>flyList(x.o.fly).forEach(a=>airs[a]=(airs[a]||0)+1));
+  [...flSel].forEach(a=>{if(!airs[a])flSel.delete(a);});
+  const akeys=Object.keys(airs).sort((a,b)=>airs[b]-airs[a]||a.localeCompare(b));
+  if(akeys.length>1)chips($("ps-filter"),akeys,{},flSel,runSearch,"All airlines");
+  const allCount=rows.length;
+  if(flSel.size)rows=rows.filter(x=>flyList(x.o.fly).some(a=>flSel.has(a)));
+  if(allCount&&!rows.length){sum.innerHTML="";out.innerHTML=`<div class="ps-empty">No results for the airlines you picked.</div>`;return;}
+  const cabName={e:"economy",b:"business",f:"first class"}[cab];
+  const route=`${from||"US"} → ${to||REGIONS[reg]}`;
+  if(!rows.length){sum.innerHTML="";out.innerHTML=`<div class="ps-empty">None of your cards' airline partners publish ${cabName} prices for this route. Try another cabin or card, or pick a different region.</div>`;return;}
+  const r0=rows[0],c0=CARDS.find(c=>c.id===r0.best.cid);
+  sum.innerHTML=`<div><small>${esc(route)} · ${cabName} · ${pax} traveler${pax>1?"s":""} · ${pTrip==="rt"?"round trip":"one way"}</small>
+    <b>${rows.length} way${rows.length>1?"s":""} to book with your points</b></div>
+    <div class="ps-best"><small>Cheapest starting price</small><b>${fk(r0.best.lo*mult)} <span>${esc(c0.unit)}</span></b><span>+ about ${usd(r0.fees[0]*mult)}–${usd(r0.fees[1]*mult)} in taxes &amp; fees</span></div>`;
+  out.innerHTML=rows.map((x,i)=>{
+    const c=CARDS.find(cc=>cc.id===x.best.cid),via=(x.P.via&&x.P.via[x.best.cid])||"";
+    const others=[...pcards].filter(id=>id!==x.best.cid&&x.P.r[id]).map(id=>CARDS.find(cc=>cc.id===id).name);
+    return `<article class="pres${i===0?" first":""}">
+      <div class="pr-main">
+        <div class="pr-tags">${i===0?'<span class="pr-badge">Lowest points</span>':""}<span class="pr-all">${esc(x.P.a)}</span></div>
+        <h4>${esc(x.o.fly)}</h4>
+        <p class="pr-prog">Book with <b>${esc(x.P.n)}</b></p>
+        <p class="pr-xfer">Transfer from ${esc(c.name)} at ${ratioTxt(x.best.r)}${via?` (${esc(via)})`:""}${others.length?` · also from ${esc(others.join(", "))}`:""}</p>
+        ${x.o.n?`<p class="pr-note">${esc(x.o.n)}</p>`:""}
+      </div>
+      <div class="pr-cost">
+        <div class="pr-pts"><b>${rng(x.best.lo*mult,x.best.hi*mult)}</b><small>${esc(c.unit)}</small></div>
+        <div class="pr-fee">+ ${rng(x.fees[0]*mult,x.fees[1]*mult,usd)} <small>taxes &amp; fees</small></div>
+        <div class="pr-each">${rng(x.m[0],x.m[1])} ${x.P.n.includes("Avios")?"Avios":"miles"} per person, each way</div>
+        <div class="pr-acts"><a class="btn small" href="${x.P.u}" target="_blank" rel="noopener">Check seats<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div>
+      </div>
+    </article>`;}).join("");
+}
+function helpBook(x){
+  $("f-from").value=$("ps-from").value.trim().toUpperCase();
+  $("f-to").value=$("ps-to").value.trim().toUpperCase();
+  const cabMap={e:"c-econ",b:"c-biz",f:"c-first"};$(cabMap[pcabin]).checked=true;
+  $("f-adults").value=Math.max(1,+$("ps-pax").value||1);
+  $("f-oneway").checked=pTrip==="ow";$("f-return").disabled=pTrip==="ow";
+  const first=$("balRows").children[0];
+  if(first&&!first.children[0].value){first.children[0].value={c1:"Capital One Miles",chase:"Chase Ultimate Rewards",amex:"Amex Membership Rewards",citi:"Citi ThankYou",bilt:"Bilt Rewards",wf:"Wells Fargo Rewards",usb:"U.S. Bank Altitude",mb:"Marriott Bonvoy"}[x.best.cid];}
+  if(x&&!$("f-notes").value)$("f-notes").value=`Interested in ${x.o.fly} through ${x.P.n}.`;
+  updateStub();
+  $("plan").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});
+}
+renderCardPicker();
+["ps-from","ps-to","ps-pax","ps-region"].forEach(id=>$(id).addEventListener("input",runSearch));
+$("ps-region").addEventListener("change",runSearch);
+document.querySelectorAll("#ps-cabin button").forEach(b=>b.onclick=()=>{pcabin=b.dataset.v;document.querySelectorAll("#ps-cabin button").forEach(x=>x.setAttribute("aria-pressed",x===b));runSearch();});
+document.querySelectorAll("#ps-trip button").forEach(b=>b.onclick=()=>{pTrip=b.dataset.v;document.querySelectorAll("#ps-trip button").forEach(x=>x.setAttribute("aria-pressed",x===b));$("mc-legs").hidden=pTrip!=="mc";if(pTrip==="mc"&&!mcLegs.length)mcLegs.push({from:$("ps-to").value.trim().toUpperCase(),to:""});renderLegs();runSearch();});
+$("ps-swap").onclick=()=>{const a=$("ps-from").value;$("ps-from").value=$("ps-to").value;$("ps-to").value=a;runSearch();};
+runSearch();
+
+/* ---------- hotels & cars ---------- */
+const HOTELS={
+  hilton:{n:"Hilton Honors",short:"Hilton",u:"https://www.hilton.com",val:0.5,r:{amex:2,bilt:1},free5:true},
+  marriott:{n:"Marriott Bonvoy",short:"Marriott",u:"https://www.marriott.com",val:0.75,r:{chase:1,amex:1,bilt:1},free5:true},
+  hyatt:{n:"World of Hyatt",short:"Hyatt",u:"https://www.hyatt.com",val:1.7,r:{chase:1,bilt:1},note:{chase:"1:1 from Sapphire Reserve. Sapphire Preferred and Ink transfer at 4:3."}},
+  ihg:{n:"IHG One Rewards",short:"IHG",u:"https://www.ihg.com",val:0.55,r:{chase:1,bilt:1}},
+  wyndham:{n:"Wyndham Rewards",short:"Wyndham",u:"https://www.wyndhamhotels.com",val:1,r:{c1:1,citi:1,bilt:1,wf:2}},
+  choice:{n:"Choice Privileges",short:"Choice",u:"https://www.choicehotels.com",val:0.6,r:{c1:1,amex:1,citi:2,wf:2}},
+  accor:{n:"Accor ALL",short:"Accor",u:"https://all.accor.com",val:2.1,r:{c1:0.5,citi:0.5,bilt:0.667,usb:0.5}},
+  iprefer:{n:"I Prefer",short:"Preferred Hotels",u:"https://preferredhotels.com",val:null,r:{c1:2,bilt:2}}
+};
+const PORTAL={
+  c1:{h:[1,1],c:[1,1],how:"Capital One Travel, or cover the charge within 90 days"},
+  chase:{h:[1,2],c:[1,1],how:"Chase Travel (Points Boost up to 2¢ on select hotels)"},
+  amex:{h:[0.7,0.7],c:[0.7,0.7],how:"Amex Travel"},
+  citi:{h:[1,1],c:[1,1],how:"Citi Travel"},
+  bilt:{h:[1.25,1.25],c:null,how:"Bilt Travel"},
+  wf:{h:[1,1],c:[1,1],how:"Wells Fargo's travel site"},
+  usb:{h:[1,1.5],c:[1,1.5],how:"U.S. Bank's travel site"}
+};
+const CARCO={
+  hertz:{n:"Hertz",u:"https://www.hertz.com"},avis:{n:"Avis",u:"https://www.avis.com"},national:{n:"National",u:"https://www.nationalcar.com"},
+  enterprise:{n:"Enterprise",u:"https://www.enterprise.com"},alamo:{n:"Alamo",u:"https://www.alamo.com"},budget:{n:"Budget",u:"https://www.budget.com"},sixt:{n:"Sixt",u:"https://www.sixt.com"}
+};
+let stayMode="hotel";const hotelSel=new Set(),carSel=new Set();
+const hcVals={hilton:{cash:"100",pts:"15000"}};
+function cname(id){return CARDS.find(c=>c.id===id);}
+function cents(v){const r=Math.round(v*100)/100;return (r%1?r.toFixed(2).replace(/0$/,""):String(r))+"¢";}
+function hratio(r){return r===2?"1:2":r===1?"1:1":r===0.5?"2:1":r===0.667?"3:2":"1:"+r;}
+function chips(host,keys,names,sel,onChange,allLabel){
+  host.innerHTML=`<button type="button" class="fchip" aria-pressed="${!sel.size}" data-k="">${allLabel}</button>`+keys.map(k=>`<button type="button" class="fchip" aria-pressed="${sel.has(k)}" data-k="${esc(k)}">${esc(names[k]||k)}</button>`).join("");
+  host.querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(!k)sel.clear();else if(sel.has(k))sel.delete(k);else sel.add(k);onChange();});
+}
+function hotelRows(key,cash,pts,nights){
+  const H=HOTELS[key],paid=H.free5?nights-Math.floor(nights/5):nights,cashT=cash*nights,ptsT=pts*paid,rows=[];
+  if(pts)rows.push({t:`Use ${H.short} points`,v:ptsT,u:`${H.short} pts`,c:cash?cashT/ptsT*100:0});
+  if(pts)pcards.forEach(id=>{const r=H.r[id];if(!r)return;const cp=Math.ceil(ptsT/r/1000)*1000;rows.push({t:`Transfer ${cname(id).name} → ${H.short}`,v:cp,u:cname(id).unit,c:cash?cashT/cp*100:0});});
+  if(cash)pcards.forEach(id=>{const P=PORTAL[id];if(!P||!P.h)return;const lo=Math.ceil(cashT/(P.h[1]/100)),hi=Math.ceil(cashT/(P.h[0]/100));rows.push({t:`Pay cash price with ${cname(id).name} points`,v:lo,hi,u:cname(id).unit,c:P.h[1],via:P.how});});
+  rows.sort((a,b)=>a.v-b.v);
+  return {rows,cashT,ptsT,paid};
+}
+function renderHotelOut(key){
+  const el=$("hco-"+key);if(!el)return;
+  const v=hcVals[key]||{},cash=toNum(v.cash),pts=toNum(v.pts),nights=Math.max(1,+$("hs-nights").value||1);
+  if(!cash&&!pts){el.innerHTML=`<p class="hint">Enter the cash and points price for a hotel you like to see the cheapest way to pay.</p>`;return;}
+  const H=HOTELS[key],{rows,cashT,ptsT,paid}=hotelRows(key,cash,pts,nights);
+  const val=pts&&cash?cashT/ptsT*100:null;
+  el.innerHTML=`<ol class="mini">${rows.map((r,i)=>`<li class="${i===0?"best":""}"><span>${esc(r.t)}${r.via?`<small>${esc(r.via)}</small>`:""}</span><b>${r.hi&&r.hi!==r.v?`${fk(r.v)}–${fk(r.hi)}`:fk(r.v)} <small>${esc(r.u)}</small></b></li>`).join("")}</ol>
+   ${val&&H.val?`<p class="hint">${esc(H.short)} points are worth <b>${cents(val)}</b> each here, vs. about ${cents(H.val)} usually. ${val>=H.val?"A good use of hotel points.":"Paying with card points or cash is likely better."}</p>`:""}
+   ${paid<nights?`<p class="hint">Includes the free 5th night on award stays.</p>`:""}`;
+}
+function renderHotels(){
+  const city=$("hs-city").value.trim(),keys=Object.keys(HOTELS);
+  chips($("h-filter"),keys,Object.fromEntries(keys.map(k=>[k,HOTELS[k].short])),hotelSel,()=>{renderHotels();updateJump();clampList("h-results",3,"hotel brands");},"All brands");
+  const show=keys.filter(k=>!hotelSel.size||hotelSel.has(k));
+  const gmap=q=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  $("h-map").innerHTML=city?`<div class="hmap"><div class="hmap-art" aria-hidden="true"><span class="pin p1"></span><span class="pin p2"></span><span class="pin p3"></span><span class="pin p4"></span><span class="pin p5"></span></div>
+    <div class="hmap-body"><small>Map view</small><b>See every hotel in ${esc(city)} on a map</b><p>See real hotels and nightly prices pinned across the area, then compare the best way to pay with your cards.</p>
+    <div class="hmap-acts"><button type="button" class="btn small" data-hview="map">Show hotels on the map</button><a class="fchip" href="${gmap("hotels in "+city)}" target="_blank" rel="noopener">Open in Google Maps</a></div></div></div>`:"";
+  $("h-map").querySelectorAll("[data-hview]").forEach(b=>b.onclick=()=>setHView("map"));
+  if(hview==="map")renderMapView();
+  $("h-summary").innerHTML=`<div><small>${city?esc(city)+" · ":""}${$("hs-nights").value||1} night${(+$("hs-nights").value||1)>1?"s":""}</small><b>${show.length} hotel brand${show.length>1?"s":""} to compare</b></div>`;
+  $("h-results").innerHTML=show.map(k=>{const H=HOTELS[k];
+    const mine=[...pcards].filter(id=>H.r[id]).map(id=>`${cname(id).name} ${hratio(H.r[id])}`);
+    const others=CARDS.filter(c=>!pcards.has(c.id)&&H.r[c.id]).map(c=>`${c.name} ${hratio(H.r[c.id])}`);
+    const st=statusFor(k);const note=[...pcards].map(id=>H.note&&H.note[id]).filter(Boolean)[0];
+    const g=`https://www.google.com/travel/search?q=${encodeURIComponent(`${H.short} hotels${city?" in "+city:""}`)}`;
+    const v=hcVals[k]||{};
+    return `<article class="chain"><div class="ch-head"><div><h4>${esc(H.short)}</h4><small>${esc(H.n)}${H.val?` · points usually worth about ${cents(H.val)}`:""}</small></div>
+      <div class="ch-links"><a class="btn small" href="${g}" target="_blank" rel="noopener">${city?`Find ${esc(H.short)} hotels in ${esc(city)}`:`Find ${esc(H.short)} hotels`}</a>${city?`<a class="btn ghost small" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(H.short+" hotels in "+city)}" target="_blank" rel="noopener">Map</a>`:""}<a class="btn ghost small" href="${H.u}" target="_blank" rel="noopener">${esc(H.u.replace(/^https:\/\/(www\.)?/,""))}</a></div></div>
+      <div class="ch-facts"><div><small>Transfer from your cards</small><b>${mine.length?esc(mine.join(" · ")):"None of your cards"}</b>${others.length?`<span>Also from ${esc(others.join(", "))}</span>`:""}${note?`<span>${esc(note)}</span>`:""}</div>
+      <div><small>Your status here</small><b>${st.length?st.map(s=>`${esc(s.t)} <span class="via">with ${esc(s.p.name)}</span>`).join("<br>"):"—"}</b></div></div>
+      <details class="ch-calc"${v.cash||v.pts?" open":""}><summary>Compare cash vs. points for a hotel</summary>
+        <div class="ch-in"><label>Cash per night<input inputmode="decimal" data-k="${k}" data-f="cash" value="${esc(v.cash||"")}" placeholder="$"></label><label>Points per night<input inputmode="numeric" data-k="${k}" data-f="pts" value="${esc(v.pts||"")}" placeholder="0"></label></div>
+        <div id="hco-${k}"></div></details></article>`;}).join("")||`<div class="ps-empty">Pick at least one brand.</div>`;
+  $("h-results").querySelectorAll(".ch-in input").forEach(inp=>inp.addEventListener("input",()=>{const k=inp.dataset.k;hcVals[k]=hcVals[k]||{};hcVals[k][inp.dataset.f]=inp.value;renderHotelOut(k);}));
+  show.forEach(renderHotelOut);
+  renderSide($("h-side"),"hotel",[]);$("h-title").textContent=city?`Hotels in ${city}`:"Hotels";
+}
+function renderCars(){
+  const ap=$("cs-ap").value.trim().toUpperCase(),cash=toNum($("cs-cash").value),days=Math.max(1,+$("cs-days").value||1),keys=Object.keys(CARCO);
+  chips($("c-filter"),keys,Object.fromEntries(keys.map(k=>[k,CARCO[k].n])),carSel,()=>{renderCars();updateJump();clampList("c-results",4,"companies");},"All companies");
+  const show=keys.filter(k=>!carSel.size||carSel.has(k));
+  const pay=[...pcards].map(id=>{const P=PORTAL[id];if(!P||!P.c)return{id,na:true};return{id,lo:Math.ceil(cash/(P.c[1]/100)),hi:Math.ceil(cash/(P.c[0]/100)),how:P.how};});
+  $("c-summary").innerHTML=`<div><small>${ap?"Pick up at "+esc(ap)+" · ":""}${days} day${days>1?"s":""}${cash?` · $${Math.round(cash).toLocaleString()} total`:""}</small><b>${show.length} rental compan${show.length>1?"ies":"y"} to compare</b></div>`;
+  $("c-results").innerHTML=show.map(k=>{const C=CARCO[k],st=statusFor(k);
+    const g=`https://www.google.com/search?q=${encodeURIComponent(`${C.n} car rental ${ap?ap+" airport":""}`.trim())}`;
+    return `<article class="chain"><div class="ch-head"><div><h4>${esc(C.n)}</h4><small>${ap?`At ${esc(ap)} airport`:"Enter your pickup airport above"}</small></div>
+      <div class="ch-links"><a class="btn small" href="${g}" target="_blank" rel="noopener">${ap?`Find ${esc(C.n)} at ${esc(ap)}`:`Find ${esc(C.n)}`}</a><a class="btn ghost small" href="${C.u}" target="_blank" rel="noopener">${esc(C.u.replace(/^https:\/\/(www\.)?/,""))}</a></div></div>
+      <div class="ch-facts"><div><small>Your status here</small><b>${st.length?st.map(s=>`${esc(s.t)} <span class="via">with ${esc(s.p.name)}</span>`).join("<br>"):"—"}</b></div>
+      <div><small>Pay with points</small><b>${cash?pay.map(x=>x.na?`<span class="via">${esc(cname(x.id).name)}: not on its travel site</span>`:`${x.lo===x.hi?fk(x.lo):fk(x.lo)+"–"+fk(x.hi)} ${esc(cname(x.id).unit)}`).join("<br>"):`<span class="via">Enter the total price above</span>`}</b></div></div></article>`;}).join("")||`<div class="ps-empty">Pick at least one company.</div>`;
+  renderSide($("c-side"),"car",[ap]);$("c-title").textContent=ap?`Rental cars at ${ap}`:"Rental cars";
+}
+["hs-city","hs-nights"].forEach(id=>$(id).addEventListener("input",()=>{renderHotels();updateJump();clampList("h-results",3,"hotel brands");}));
+["cs-ap","cs-cash","cs-days"].forEach(id=>$(id).addEventListener("input",()=>{renderCars();updateJump();clampList("c-results",4,"companies");}));
+$("showPlan").onclick=()=>{$("plan").hidden=false;$("plan").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});};
+/* ---------- hotel map view (standalone site) ---------- */
+const CFG=Object.assign({hotelsApi:"/api/hotels",tiles:{url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png",attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:19}},window.ATD_CONFIG||{});
+const CC={London:"GB",Paris:"FR",Rome:"IT",Barcelona:"ES",Lisbon:"PT",Athens:"GR",Amsterdam:"NL",Dublin:"IE",Zurich:"CH",Istanbul:"TR","Reykjavík":"IS",Cologne:"DE",Dubai:"AE",Doha:"QA",Maldives:"MV",Delhi:"IN",Tokyo:"JP",Seoul:"KR","Hong Kong":"HK",Singapore:"SG",Bangkok:"TH",Bali:"ID",Hanoi:"VN",Beijing:"CN",Sydney:"AU",Melbourne:"AU",Auckland:"NZ","Cape Town":"ZA",Nairobi:"KE",Cairo:"EG","São Paulo":"BR","Buenos Aires":"AR",Lima:"PE","Bogotá":"CO","Cancún":"MX","Los Cabos":"MX","Costa Rica":"CR","Punta Cana":"DO",Vancouver:"CA",Toronto:"CA",Montreal:"CA","Mexico City":"MX",Madrid:"ES",Frankfurt:"DE",Munich:"DE",Milan:"IT",Venice:"IT",Nice:"FR",Edinburgh:"GB",Copenhagen:"DK",Prague:"CZ",Vienna:"AT",Budapest:"HU","Abu Dhabi":"AE",Mumbai:"IN",Shanghai:"CN",Taipei:"TW",Osaka:"JP",Manila:"PH",Phuket:"TH",Brisbane:"AU","San Juan":"PR",Nassau:"BS",Aruba:"AW","Rio de Janeiro":"BR",Santiago:"CL",Johannesburg:"ZA","Puerto Vallarta":"MX","Montego Bay":"JM",Queenstown:"NZ",Fiji:"FJ",Tahiti:"PF",Mauritius:"MU"};
+const BRANDKW={hilton:["hilton","doubletree","hampton","embassy suites","conrad","waldorf","canopy","curio","tapestry","homewood","home2","tru by","motto","lxr","signia","spark by"],
+ marriott:["marriott","courtyard","sheraton","westin","w hotel","ritz-carlton","ritz carlton","st. regis","st regis","jw ","méridien","meridien","renaissance","autograph","tribute","aloft","moxy","element","fairfield","residence inn","springhill","towneplace","four points","ac hotel","delta hotels","luxury collection","edition","gaylord"],
+ hyatt:["hyatt","andaz","thompson","alila","caption by","unbound collection","joie de vivre"],
+ ihg:["intercontinental","kimpton","holiday inn","crowne plaza","hotel indigo","voco","staybridge","candlewood","six senses","regent","avid hotel","even hotel"],
+ wyndham:["wyndham","ramada","days inn","super 8","la quinta","microtel","baymont","wingate","howard johnson","travelodge","tryp","dolce"],
+ choice:["comfort inn","comfort suites","quality inn","sleep inn","clarion","cambria","econo lodge","rodeway","mainstay","ascend","radisson","country inn"],
+ accor:["sofitel","novotel","ibis","mercure","pullman","fairmont","raffles","swissotel","swissôtel","mgallery","mövenpick","movenpick","adagio","mama shelter","25hours","rixos"],iprefer:[]};
+function brandOf(name){const n=" "+(name||"").toLowerCase()+" ";for(const k in BRANDKW)if(BRANDKW[k].some(w=>n.includes(w)))return k;return"other";}
+function brandName(k){return HOTELS[k]?HOTELS[k].short:"Independent";}
+function cityParts(city){const m=city.match(/^(.*?),\s*([A-Za-z]{2})$/);const name=(m?m[1]:city).trim();return{name,country:(m?m[2]:(CC[name]||"US")).toUpperCase()};}
+function cityCenter(name){const p=PINS.find(x=>x.n.toLowerCase()===name.toLowerCase());return p?{lat:p.lat,lng:p.lon}:null;}
+function addDays(d,n){const t=new Date(d+"T12:00:00");t.setDate(t.getDate()+n);return t.toISOString().slice(0,10);}
+let hview="brands",hdata={key:"",hotels:[],source:""},hmapObj=null,hlayer=null,hmarkers={},hTimer=null;
+(function initCheckin(){const t=new Date();t.setDate(t.getDate()+30);$("hs-in").value=t.toISOString().slice(0,10);})();
+function demoHotels(city){
+  const c=cityCenter(cityParts(city).name)||{lat:40.754,lng:-73.984},bs=["hilton","marriott","hyatt","ihg","accor","wyndham","choice","other","marriott","hilton"];
+  return bs.map((b,i)=>({id:"demo"+i,name:`Example ${b==="other"?"boutique":brandName(b)} hotel ${i+1}`,lat:c.lat+Math.sin(i*2.3)*0.022,lng:c.lng+Math.cos(i*1.7)*0.032,stars:3+(i%3),address:"Example address",photo:"",brand:b,price:(150+((i*53)%260))*(+$("hs-nights").value||1),demo:true}));
+}
+async function loadHotels(){
+  const city=$("hs-city").value.trim();if(!city){hdata={key:"",hotels:[],source:""};renderMapView();return;}
+  const nights=Math.max(1,+$("hs-nights").value||1),ci=$("hs-in").value,co=ci?addDays(ci,nights):"";
+  const key=[city,ci,nights].join("|");if(key===hdata.key&&!hdata.loading){renderMapView();return;}
+  hdata={key,hotels:[],source:"",loading:true};renderMapView();
+  const {name,country}=cityParts(city);
+  try{
+    const r=await fetch(`${CFG.hotelsApi}?`+new URLSearchParams({city:name,country,checkin:ci,checkout:co,adults:"2"}));
+    const j=await r.json();if(j.error||!Array.isArray(j.hotels))throw new Error(j.error||"bad_response");
+    if(key!==[$("hs-city").value.trim(),$("hs-in").value,Math.max(1,+$("hs-nights").value||1)].join("|"))return;
+    hdata={key,hotels:j.hotels.filter(h=>h.lat&&h.lng),source:"live"};
+  }catch(e){hdata={key,hotels:demoHotels(city),source:"demo",err:String(e.message||e)};}
+  renderMapView();
+}
+function bestPay(total){
+  let best=null;pcards.forEach(id=>{const P=PORTAL[id];if(!P||!P.h)return;const pts=Math.ceil(total/(P.h[1]/100));if(!best||pts<best.pts)best={id,pts};});return best;
+}
+function hotelCardHTML(h,nights){
+  const b=(h.brand||brandOf(h.name)),H=HOTELS[b],tr=H?[...pcards].filter(id=>H.r[id]).map(id=>`${cname(id).name} ${hratio(H.r[id])}`):[];
+  const per=h.price?h.price/nights:null,bp=h.price?bestPay(h.price):null;
+  return `<button type="button" class="mv-item" data-id="${esc(h.id)}">${h.photo?`<img src="${esc(h.photo)}" alt="" loading="lazy">`:`<span class="mv-ph" aria-hidden="true">${esc(brandName(b).slice(0,1))}</span>`}
+    <span class="mv-txt"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.stars?` · ${"★".repeat(Math.round(h.stars))}`:""}</small>
+    ${tr.length?`<small class="mv-tr">Transfer: ${esc(tr.join(" · "))}</small>`:""}</span>
+    <span class="mv-price">${per?`<b>$${Math.round(per).toLocaleString()}</b><small>per night</small>${bp?`<small>or ${fk(bp.pts)} ${esc(cname(bp.id).unit)}</small>`:""}`:`<small>No price for these dates</small>`}</span></button>`;
+}
+function popupHTML(h,nights){
+  const b=(h.brand||brandOf(h.name)),per=h.price?h.price/nights:null;
+  const pays=h.price?[...pcards].map(id=>{const P=PORTAL[id];if(!P||!P.h)return"";const lo=Math.ceil(h.price/(P.h[1]/100)),hi=Math.ceil(h.price/(P.h[0]/100));return `<li>${esc(cname(id).name)}: ${lo===hi?fk(lo):fk(lo)+"–"+fk(hi)} points</li>`;}).join(""):"";
+  return `<div class="pop"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.address?` · ${esc(h.address)}`:""}</small>${per?`<p>$${Math.round(per).toLocaleString()} per night · $${Math.round(h.price).toLocaleString()} total</p>`:""}${pays?`<ul>${pays}</ul>`:""}${HOTELS[b]?`<button type="button" class="btn small" data-compare="${b}" data-per="${per?Math.round(per):""}">Compare with ${esc(brandName(b))} points</button>`:""}</div>`;
+}
+function renderMapView(){
+  const wrap=$("h-mapview");if(!wrap||hview!=="map")return;
+  const city=$("hs-city").value.trim(),nights=Math.max(1,+$("hs-nights").value||1),note=$("mv-note"),list=$("mv-list");
+  if(!city){note.innerHTML="";list.innerHTML=`<div class="ps-empty">Enter a city to see hotels on the map.</div>`;drawMap([],nights);return;}
+  if(hdata.loading){note.innerHTML=`<span class="mv-dot"></span>Finding hotels in ${esc(city)}…`;list.innerHTML="";return;}
+  const shown=hdata.hotels.filter(h=>!hotelSel.size||hotelSel.has((h.brand||brandOf(h.name)))).sort((a,b)=>(a.price||1e9)-(b.price||1e9));
+  note.innerHTML=hdata.source==="demo"?`<b>Example pins.</b> Add your hotel data key to show real hotels and prices (see the setup guide).`:`<b>${shown.length} hotels</b> in ${esc(city)} · prices for ${nights} night${nights>1?"s":""} from ${esc($("hs-in").value)}`;
+  list.innerHTML=shown.map(h=>hotelCardHTML(h,nights)).join("")||`<div class="ps-empty">No hotels match these brands.</div>`;
+  list.querySelectorAll(".mv-item").forEach(el=>{
+    el.addEventListener("mouseenter",()=>hiPin(el.dataset.id,true));el.addEventListener("mouseleave",()=>hiPin(el.dataset.id,false));
+    el.onclick=()=>focusHotel(el.dataset.id);});
+  drawMap(shown,nights);
+}
+function hiPin(id,on){const m=hmarkers[id];const el=m&&(m.getElement?m.getElement():m);if(el)el.classList.toggle("hot",on);}
+function focusHotel(id){
+  const h=hdata.hotels.find(x=>x.id===id),nights=Math.max(1,+$("hs-nights").value||1);if(!h)return;
+  document.querySelectorAll(".mv-item").forEach(x=>x.classList.toggle("sel",x.dataset.id===id));
+  const m=hmarkers[id];
+  if(hmapObj&&m&&m.openPopup){hmapObj.flyTo([h.lat,h.lng],Math.max(hmapObj.getZoom(),15),{duration:.6});m.openPopup();}
+  else showFallbackPopup(h,nights);
+}
+function wireCompare(root){root.querySelectorAll("[data-compare]").forEach(b=>b.onclick=()=>{
+  const k=b.dataset.compare;hcVals[k]=hcVals[k]||{};if(b.dataset.per)hcVals[k].cash=b.dataset.per;setHView("brands");hotelSel.clear();renderHotels();updateJump();
+  const card=[...document.querySelectorAll("#h-results .chain")].find(c=>c.querySelector("h4").textContent===brandName(k));
+  if(card){card.hidden=false;const d=card.querySelector("details");if(d)d.open=true;card.scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"});const inp=card.querySelector('input[data-f="pts"]');if(inp)setTimeout(()=>inp.focus({preventScroll:true}),400);}});}
+function drawMap(shown,nights){
+  const box=$("mv-map");
+  if(window.L){
+    if(!hmapObj){box.innerHTML="";hmapObj=L.map(box,{scrollWheelZoom:false,zoomControl:true});L.tileLayer(CFG.tiles.url,{attribution:CFG.tiles.attribution,maxZoom:CFG.tiles.maxZoom||19}).addTo(hmapObj);hlayer=L.layerGroup().addTo(hmapObj);
+      hmapObj.on("popupopen",e=>wireCompare(e.popup.getElement()));}
+    setTimeout(()=>hmapObj.invalidateSize(),50);
+    hlayer.clearLayers();hmarkers={};
+    shown.forEach(h=>{const per=h.price?Math.round(h.price/nights):null;
+      const icon=L.divIcon({className:"",html:`<span class="mk${h.demo?" demo":""}">${per?"$"+per.toLocaleString():esc(brandName((h.brand||brandOf(h.name))).slice(0,1))}</span>`,iconSize:null});
+      const m=L.marker([h.lat,h.lng],{icon}).addTo(hlayer).bindPopup(popupHTML(h,nights),{maxWidth:280});
+      m.on("click",()=>document.querySelectorAll(".mv-item").forEach(x=>{const on=x.dataset.id===h.id;x.classList.toggle("sel",on);if(on)x.scrollIntoView({block:"nearest",behavior:reduce?"auto":"smooth"});}));
+      hmarkers[h.id]=m;});
+    if(shown.length)hmapObj.fitBounds(L.latLngBounds(shown.map(h=>[h.lat,h.lng])).pad(0.15));
+    else{const c=cityCenter(cityParts($("hs-city").value.trim()).name);if(c)hmapObj.setView([c.lat,c.lng],12);}
+    return;
+  }
+  // fallback when the map library can't load: plot pins on a simple grid
+  box.classList.add("mv-fallback");
+  if(!shown.length){box.innerHTML="";return;}
+  const la=shown.map(h=>h.lat),lo=shown.map(h=>h.lng),minA=Math.min(...la),maxA=Math.max(...la),minO=Math.min(...lo),maxO=Math.max(...lo);
+  const px=h=>8+84*((h.lng-minO)/((maxO-minO)||1)),py=h=>8+84*(1-(h.lat-minA)/((maxA-minA)||1));
+  box.innerHTML=shown.map(h=>{const per=h.price?Math.round(h.price/nights):null;return `<span class="mk${h.demo?" demo":""}" data-id="${esc(h.id)}" style="left:${px(h)}%;top:${py(h)}%">${per?"$"+per.toLocaleString():"•"}</span>`;}).join("")+`<div class="mv-pop" id="mv-pop" hidden></div>`;
+  hmarkers={};box.querySelectorAll(".mk").forEach(el=>{hmarkers[el.dataset.id]=el;el.onclick=()=>focusHotel(el.dataset.id);});
+}
+function showFallbackPopup(h,nights){const p=$("mv-pop");if(!p)return;p.innerHTML=popupHTML(h,nights)+`<button type="button" class="x mv-x" aria-label="Close">×</button>`;p.hidden=false;p.querySelector(".mv-x").onclick=()=>p.hidden=true;wireCompare(p);}
+function setHView(v){
+  hview=v;document.querySelectorAll("#h-view button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
+  $("h-brands").hidden=v!=="brands";$("h-mapview").hidden=v!=="map";
+  if(v==="map")loadHotels();
+}
+document.querySelectorAll("#h-view button").forEach(b=>b.onclick=()=>setHView(b.dataset.v));
+["hs-city","hs-nights","hs-in"].forEach(id=>$(id).addEventListener("input",()=>{if(hview!=="map")return;clearTimeout(hTimer);hTimer=setTimeout(loadHotels,600);}));
+
+/* ---------- map + planner glue ---------- */
+let hsTouched=false,csTouched=false,lastTo="",jmap=null;
+function quickBest(code){
+  const from=$("ps-from").value.trim().toUpperCase(),fr=regionFor(from);if(fr&&!["dom","hi"].includes(fr))return null;
+  let reg=regionFor(code);if(!reg)return null;if(fr==="hi"&&reg==="dom")reg="hi";
+  let best=null;(ROUTES[reg]||[]).forEach(o=>{const m=o[pcabin];if(!m)return;const P=PROGS[o.p];pcards.forEach(cid=>{const r=P.r[cid];if(!r)return;const lo=cardPts(m[0],r);if(!best||lo<best.lo)best={lo,cid};});});
+  return best;
+}
+function pickDest(code){$("ps-to").value=code;$("ps-region").value="";runSearch();setMode("flights",true);}
+function fallbackPins(){
+  $("worldmap").hidden=true;const f=$("map-fallback");f.hidden=false;
+  f.innerHTML=`<small style="flex-basis:100%;color:var(--muted);font-size:13px">Popular destinations</small>`+PINS.map(p=>`<button type="button" class="fchip" data-c="${p.c}">${esc(p.n)}</button>`).join("");
+  f.querySelectorAll("button").forEach(b=>b.onclick=()=>pickDest(b.dataset.c));
+}
+function initMap(){
+  if(typeof jsVectorMap==="undefined"){fallbackPins();return;}
+  const cs=getComputedStyle(document.documentElement),tok=n=>cs.getPropertyValue(n).trim();
+  try{
+    jmap=new jsVectorMap({selector:"#worldmap",map:"world",backgroundColor:"transparent",zoomButtons:true,zoomOnScroll:false,
+      regionStyle:{initial:{fill:tok("--map-land"),stroke:tok("--map-line"),strokeWidth:0.5,fillOpacity:1},hover:{fillOpacity:1,cursor:"default"}},
+      markers:PINS.map(p=>({name:p.n,coords:[p.lat,p.lon]})),
+      markerStyle:{initial:{fill:tok("--gold"),stroke:tok("--paper"),strokeWidth:2,r:6},hover:{fill:tok("--ink"),cursor:"pointer"},selected:{fill:tok("--ink")}},
+      markersSelectable:true,markersSelectableOne:true,
+      onMarkerClick:(e,i)=>pickDest(PINS[+i].c),
+      onMarkerTooltipShow:(e,tip,i)=>{const p=PINS[+i],b=quickBest(p.c);tip.text(`${p.n} · ${p.c}`+(b?` · from ${fk(b.lo)} ${cname(b.cid).unit}`:""));},
+      onRegionTooltipShow:(e)=>{if(e&&e.preventDefault)e.preventDefault();}
+    });
+    if(!$("worldmap").querySelector("svg"))fallbackPins();
+  }catch(err){fallbackPins();}
+}
+let mode="flights";
+function updateJump(){
+  const from=$("ps-from").value.trim().toUpperCase(),to=$("ps-to").value.trim().toUpperCase(),city=$("hs-city").value.trim(),ap=$("cs-ap").value.trim().toUpperCase();
+  const b=to?quickBest(to):null,hb=Object.keys(HOTELS).filter(k=>!hotelSel.size||hotelSel.has(k)).length,cb=Object.keys(CARCO).filter(k=>!carSel.size||carSel.has(k)).length;
+  const ic=id=>$(id).querySelector(".rsec-ic").outerHTML,pax=Math.max(1,+$("ps-pax").value||1),cab={e:"Economy",b:"Business",f:"First"}[pcabin];
+  const nights=+$("hs-nights").value||1,days=+$("cs-days").value||1;
+  const chain=[from,to,...mcLegs.map(l=>l.to)].filter(Boolean).map(c=>esc(c)).join(" → ");
+  const route=pTrip==="mc"&&mode==="flights"?`<small>Multi-city · ${cab} · ${pax} traveler${pax>1?"s":""}</small><b>${chain}</b>`:mode==="hotels"?`<small>${nights} night${nights>1?"s":""}</small><b>Hotels in ${esc(city||"…")}</b>`:mode==="cars"?`<small>${days} day${days>1?"s":""}</small><b>Rental cars at ${esc(ap||"…")}</b>`:`<small>${cab} · ${pax} traveler${pax>1?"s":""} · ${pTrip==="rt"?"Round trip":"One way"}</small><b>${esc(from||"From")} → ${esc(to?(CITY[to]||to):"Where to?")}</b>`;
+  const chip=(m,label,val)=>`<button type="button" class="tb-chip" data-m="${m}" aria-pressed="${mode===m}">${ic("sec-"+m)}<span><small>${label}</small><b>${val}</b></span></button>`;
+  $("jump").innerHTML=`<div class="tb-route">${route}</div>`+
+    chip("flights","Flights",b?`From ${fk(b.lo)}`:"Add a destination")+
+    chip("hotels","Hotels",city?`${hb} brands`:"Add a city")+
+    chip("cars","Rental cars",ap?`${cb} companies`:"Add an airport");
+  $("jump").querySelectorAll(".tb-chip").forEach(x=>x.onclick=()=>setMode(x.dataset.m,true));
+}
+function setMode(m,scroll){
+  mode=m;
+  document.querySelectorAll(".mode button").forEach(b=>b.setAttribute("aria-selected",b.dataset.m===m));
+  $("sb-fl").hidden=$("sb-foot").hidden=m!=="flights";$("mc-legs").hidden=m!=="flights"||pTrip!=="mc";$("sb-ho").hidden=m!=="hotels";$("sb-car").hidden=m!=="cars";
+  ["flights","hotels","cars"].forEach(k=>$("sec-"+k).hidden=k!==m);
+  if(m==="hotels"){$("hx-city").value=$("hs-city").value;$("hx-nights").value=$("hs-nights").value;}
+  if(m==="cars"){$("hx-ap").value=$("cs-ap").value;$("hx-days").value=$("cs-days").value;$("hx-cash").value=$("cs-cash").value;}
+  updateJump();
+  if(scroll)$("results").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});
+}
+document.querySelectorAll(".mode button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+[["hx-city","hs-city"],["hx-nights","hs-nights"],["hx-ap","cs-ap"],["hx-days","cs-days"],["hx-cash","cs-cash"]].forEach(([a,b])=>$(a).addEventListener("input",()=>{$(b).value=$(a).value;$(b).dispatchEvent(new Event("input"));}));
+[["hs-city","hx-city"],["hs-nights","hx-nights"],["cs-ap","hx-ap"],["cs-days","hx-days"],["cs-cash","hx-cash"]].forEach(([a,b])=>$(a).addEventListener("input",e=>{if(e.isTrusted)$(b).value=$(a).value;}));
+document.querySelectorAll("[data-search]").forEach(b=>b.onclick=()=>setMode(b.dataset.search,true));
+["hx-city","hx-nights"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();setMode("hotels",true);}}));
+["hx-ap","hx-days","hx-cash"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();setMode("cars",true);}}));
+const OPENLIST=new Set();
+function clampList(id,n,noun){
+  const el=$(id);if(!el)return;el.querySelectorAll(".more-btn").forEach(x=>x.remove());
+  const items=[...el.children].filter(c=>c.matches(".pres,.chain"));
+  if(items.length<=n)return;
+  const open=OPENLIST.has(id);items.forEach((x,i)=>x.hidden=!open&&i>=n);
+  const btn=document.createElement("button");btn.type="button";btn.className="more-btn";
+  btn.textContent=open?"Show fewer":`Show all ${items.length} ${noun}`;
+  btn.onclick=()=>{if(OPENLIST.has(id))OPENLIST.delete(id);else OPENLIST.add(id);clampList(id,n,noun);};
+  el.appendChild(btn);
+}
+function afterSearch(){
+  const from=$("ps-from").value.trim().toUpperCase(),to=$("ps-to").value.trim().toUpperCase();
+  if(to!==lastTo&&/^[A-Z]{3}$/.test(to)){lastTo=to;if(!hsTouched)$("hs-city").value=CITY[to]||"";if(!csTouched)$("cs-ap").value=to;}
+  $("fl-title").textContent=pTrip==="mc"?"Your multi-city trip":to?`Flights from ${from||"the US"} to ${CITY[to]||to}`:"Flights";
+  renderHotels();renderCars();updateJump();
+  clampList("ps-results",4,"options");clampList("h-results",3,"hotel brands");clampList("c-results",4,"companies");
+}
+$("hs-city").addEventListener("input",()=>{hsTouched=!!$("hs-city").value;});
+$("cs-ap").addEventListener("input",()=>{csTouched=!!$("cs-ap").value;});
+document.querySelectorAll("[data-go]").forEach(a=>a.addEventListener("click",e=>{e.preventDefault();setMode(a.dataset.go,true);}));
+{const h=(location.hash||"").slice(1);if(["flights","hotels","cars"].includes(h))setTimeout(()=>setMode(h,true),80);}
+window.__ready=true;initMap();afterSearch();setMode("flights");
+$("goSearch").onclick=()=>{runSearch();setMode("flights",true);};
+["ps-from","ps-to","ps-pax"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("goSearch").click();}}));
+[["LHR","London"],["HND","Tokyo"],["CDG","Paris"],["CUN","Cancún"],["HNL","Honolulu"],["SYD","Sydney"],["DXB","Dubai"]].forEach(([c,n])=>{const b=document.createElement("button");b.type="button";b.textContent=n;b.onclick=()=>{if(mode==="hotels"){$("hx-city").value=n;$("hx-city").dispatchEvent(new Event("input"));setMode("hotels",true);}else if(mode==="cars"){$("hx-ap").value=c;$("hx-ap").dispatchEvent(new Event("input"));setMode("cars",true);}else{$("ps-to").value=c;$("ps-region").value="";runSearch();setMode("flights",true);}};$("popular").appendChild(b);});
+
+/* ---------- views ---------- */
+function show(view){
+  for(const v of ["client","dash","settings"])$("view-"+v).hidden=v!==view;
+  document.body.classList.toggle("on-hero",view==="client");
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.view===view));
+  $("previewNote").hidden=!(isOwner&&view==="client");
+  $("topCta").hidden=view!=="client";$("ownerTabs").hidden=!isOwner||view==="client";$("ownerBtn").hidden=!isOwner||view!=="client";
+  scrollTo(0,0);
+}
+document.body.classList.add("on-hero");
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>show(t.dataset.view));
+
+let dview="list",q="";
+const STCOL={new:"var(--new)",searching:"var(--warn)",quoted:"var(--gold)",booked:"var(--ok)",closed:"var(--closed)"};
+const X_ICON='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+function stOf(r){return r.status||"new";}
+function stLabel(k){return STAGES.find(s=>s[0]===k)[1];}
+function destOf(r){return byCode[(r.trip?.to||"").toUpperCase()];}
+function ptsOf(r){return (r.balances||[]).reduce((s,b)=>s+toNum(b.amount),0);}
+function feeOf(r){return toNum(r.quote?.fee);}
+function money(n){return "$"+Math.round(n).toLocaleString();}
+function ago(ts){if(!ts)return"";const m=Math.round((Date.now()-ts)/60000);if(m<1)return"just now";if(m<60)return m+"m ago";const h=Math.round(m/60);if(h<24)return h+"h ago";const d=Math.round(h/24);return d<30?d+"d ago":new Date(ts).toLocaleDateString(undefined,{month:"short",day:"numeric"});}
+function thumb(r,cls="thumb"){const d=destOf(r);return d?`<div class="${cls} ph ph-${d.k}"></div>`:`<div class="${cls} gen">${esc((r.trip?.to||"?").slice(0,3))}</div>`;}
+function badge(k){return `<span class="badge" style="color:${STCOL[k]}"><i></i>${stLabel(k)}</span>`;}
+function dates(t){return `${fmtDate(t.depart,true)||"No date"}${t.ret?" – "+fmtDate(t.ret,true):t.oneway?" · one way":""}`;}
+function pax(t){return (t.adults||1)+(t.kids||0);}
+
+function renderKpis(){
+  const c=k=>requests.filter(r=>stOf(r)===k).length;
+  const open=requests.filter(r=>!["booked","closed"].includes(stOf(r))).length;
+  const feeBooked=requests.filter(r=>stOf(r)==="booked").reduce((s,r)=>s+feeOf(r),0);
+  const feeQuoted=requests.filter(r=>stOf(r)==="quoted").reduce((s,r)=>s+feeOf(r),0);
+  if($("ownerBtn"))$("ownerBtn").textContent=`Requests · ${open} open`;
+  $("kpis").innerHTML=`
+    <div class="kpi k1"><small><i></i>Open requests</small><b>${open}</b><span>${c("new")} new · ${c("searching")} searching</span></div>
+    <div class="kpi k2"><small><i></i>Quotes out</small><b>${c("quoted")}</b><span>Waiting on clients</span></div>
+    <div class="kpi k3"><small><i></i>Trips booked</small><b>${c("booked")}</b><span>All time</span></div>
+    <div class="kpi k4"><small><i></i>Fees earned</small><b>${money(feeBooked)}</b><span>${money(feeQuoted)} more in open quotes</span></div>`;
+  const total=requests.length;
+  $("pipebar").innerHTML=total?STAGES.map(([k])=>{const n=c(k);return n?`<span style="flex:${n};color:${STCOL[k]}"></span>`:"";}).join(""):`<span class="empty-bar"></span>`;
+  const h=new Date().getHours();
+  $("hello").textContent=`${h<12?"Good morning":h<18?"Good afternoon":"Good evening"} · ${new Date().toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}`;
+}
+function renderPipe(){
+  const all=`<button class="fchip" data-k="" aria-pressed="${!filter}">All <em>${requests.length}</em></button>`;
+  $("pipe").innerHTML=all+STAGES.map(([k,l])=>`<button class="fchip" data-k="${k}" aria-pressed="${filter===k}"><i style="color:${STCOL[k]}"></i>${l} <em>${requests.filter(r=>stOf(r)===k).length}</em></button>`).join("");
+  $("pipe").querySelectorAll(".fchip").forEach(b=>b.onclick=()=>{filter=b.dataset.k||null;renderAll();});
+}
+function visible(){
+  let rows=requests.slice().sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  if(q){const s=q.toLowerCase();rows=rows.filter(r=>[r.client?.name,r.client?.contact,r.trip?.from,r.trip?.to,r.notes,destOf(r)?.city].join(" ").toLowerCase().includes(s));}
+  return rows;
+}
+function renderList(){
+  const host=$("reqList");
+  let rows=visible();
+  if(dview==="board"){
+    host.innerHTML=`<div class="kanban">${STAGES.map(([k,l])=>{const items=rows.filter(r=>stOf(r)===k);
+      return `<div class="kcol"><div class="kcol-h" style="color:${STCOL[k]}"><span>${l}</span><em>${items.length}</em></div>
+      ${items.length?items.map(r=>{const t=r.trip||{},d=destOf(r);return `<button class="kcard" data-id="${esc(r.id)}">${d?`<div class="kph ph ph-${d.k}"></div>`:`<div class="kph gen">${esc(t.to||"?")}</div>`}
+        <div class="kb"><b>${esc(t.from||"?")} → ${esc(t.to||"?")}</b><small>${esc(r.client?.name||"Unnamed")}${r.example?' · <span class="ex">Example</span>':""}</small><small>${esc(dates(t))} · ${esc(t.cabin||"")}</small></div></button>`;}).join(""):`<div class="kempty">Nothing here</div>`}</div>`;}).join("")}</div>`;
+  } else {
+    if(filter)rows=rows.filter(r=>stOf(r)===filter);
+    if(!rows.length){host.innerHTML=`<div class="empty">${q||filter?"No requests match.":"No requests yet. Share your client page, then add what clients send you."}</div>`;return;}
+    host.innerHTML=`<div class="rlist"><div class="rhead"><span>Trip</span><span>Dates &amp; cabin</span><span>Points</span><span style="text-align:right">Status</span></div>${rows.map(r=>{const t=r.trip||{},k=stOf(r),d=destOf(r),p=ptsOf(r);
+      return `<button class="rrow" data-id="${esc(r.id)}">${thumb(r)}
+        <div class="cellm"><b>${esc(t.from||"?")} <span class="arr">→</span> ${esc(t.to||"?")}${d?`<small style="font-weight:500">${esc(d.city)}</small>`:""}</b><small>${esc(r.client?.name||"Unnamed")}${r.example?' · <span class="ex">Example</span>':""} · ${esc(ago(r.createdAt))}</small></div>
+        <div class="cellm hide-sm"><b style="font-weight:500">${esc(dates(t))}</b><small>${esc(t.cabin||"Any cabin")} · ${pax(t)} traveler${pax(t)>1?"s":""}</small></div>
+        <div class="cellm hide-sm"><b class="num" style="font-weight:500">${p?short(p):"—"}</b><small>${(r.balances||[]).length} program${(r.balances||[]).length===1?"":"s"}</small></div>
+        <div class="stcell">${badge(k)}${feeOf(r)?`<span class="fee">${money(feeOf(r))} fee</span>`:""}</div></button>`;}).join("")}</div>`;
+  }
+  host.querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>openReq(b.dataset.id));
+}
+function renderAll(){renderKpis();renderPipe();renderList();if(openId)refreshDrawer();}
+$("q").addEventListener("input",e=>{q=e.target.value.trim();renderList();});
+document.querySelectorAll(".vt button").forEach(b=>b.onclick=()=>{dview=b.dataset.v;document.querySelectorAll(".vt button").forEach(x=>x.setAttribute("aria-pressed",x===b));$("pipe").style.visibility=dview==="board"?"hidden":"visible";renderList();});
+
+/* drawer */
+let lastFocus=null,drawerKind=null;
+function openDrawer(html,kind){lastFocus=document.activeElement;drawerKind=kind;$("drawer").innerHTML=html;$("drawer").hidden=false;$("scrim").hidden=false;$("drawer").scrollTop=0;document.body.style.overflow="hidden";const x=$("drawer").querySelector(".dr-x");x&&x.focus();$("drawer").querySelectorAll(".dr-x").forEach(b=>b.onclick=closeDrawer);}
+function closeDrawer(){$("drawer").hidden=true;$("scrim").hidden=true;document.body.style.overflow="";openId=null;drawerKind=null;lastFocus&&lastFocus.focus&&lastFocus.focus();}
+$("scrim").onclick=closeDrawer;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("drawer").hidden)closeDrawer();});
+function openReq(id){openId=id;const r=requests.find(x=>x.id===id);if(!r)return;openDrawer(reqHTML(r),"req");wireReq(r);}
+function refreshDrawer(){if(drawerKind!=="req")return;const r=requests.find(x=>x.id===openId);if(!r){closeDrawer();return;}
+  const bar=$("drawer").querySelector(".stbar");if(bar)bar.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===stOf(r)));}
+function reqHTML(r){
+  const t=r.trip||{},d=destOf(r),qq=r.quote||{},k=stOf(r);
+  return `<div class="dr-photo">${d?`<div class="ph ph-${d.k}"></div>`:`<div class="gen"></div>`}
+      <button class="dr-x" type="button" aria-label="Close">${X_ICON}</button>
+      <div><span class="code">${esc(t.from||"?")} → ${esc(t.to||"?")}${d?" · "+esc(d.country.toUpperCase()):""}</span><h3>${esc(d?d.city:(t.to||"New trip"))}</h3><p>${esc(r.client?.name||"Unnamed")}${r.example?" · Example request":""} · received ${esc(ago(r.createdAt))}</p></div></div>
+    <div class="dr-body">
+      <div class="dr-sec"><small>Status</small><div class="stbar">${STAGES.map(([kk,l])=>`<button type="button" data-k="${kk}" style="color:${STCOL[kk]}" aria-pressed="${kk===k}">${l}</button>`).join("")}</div></div>
+      <div class="dr-sec"><small>Trip</small><div class="facts">
+        <div class="fact"><small>Depart</small><b>${esc(fmtDate(t.depart)||"—")}</b></div>
+        <div class="fact"><small>Return</small><b>${esc(t.oneway?"One way":fmtDate(t.ret)||"—")}</b></div>
+        <div class="fact"><small>Cabin</small><b>${esc(t.cabin||"—")}</b></div>
+        <div class="fact"><small>Travelers</small><b>${t.adults||1} adult${(t.adults||1)>1?"s":""}${t.kids?`, ${t.kids} child${t.kids>1?"ren":""}`:""}</b></div>
+        <div class="fact"><small>Flexibility</small><b>${esc(t.flex||"—")}</b></div>
+        <div class="fact"><small>Contact</small><b>${esc(r.client?.contact||"—")}</b></div>
+        ${r.notes?`<div class="fact wide"><small>Notes</small><b style="font-weight:500">${esc(r.notes)}</b></div>`:""}
+      </div></div>
+      <div class="dr-sec"><small>Points · ${ptsOf(r)?short(ptsOf(r))+" total":"none listed"}</small><div class="pts-list">${(r.balances||[]).map(b=>`<div class="pts-row"><span>${esc(b.program||"Program")}</span><b>${esc(num(b.amount))}</b></div>`).join("")||'<p class="hint">No balances listed.</p>'}</div></div>
+      <div class="dr-sec"><small>Your quote</small>
+        <label for="d-options">Options found<textarea id="d-options" placeholder="e.g. Qantas business LAX–SYD via American miles, 2 seats…">${esc(qq.options||"")}</textarea></label>
+        <label for="d-fee">Your fee<input id="d-fee" inputmode="decimal" placeholder="$150" value="${esc(qq.fee||"")}"></label>
+        <pre class="out" id="d-out" hidden></pre>
+      </div>
+    </div>
+    <div class="dr-foot">
+      <button class="btn small" id="d-save" type="button">Save quote</button>
+      <button class="btn ghost small" id="d-msg" type="button">Copy message to client</button>
+      <button class="btn danger small" id="d-del" type="button" style="margin-left:auto">Delete</button>
+      <span id="d-note" style="flex-basis:100%"></span>
+    </div>`;
+}
+function wireReq(r){
+  const D=$("drawer");
+  D.querySelectorAll(".stbar button").forEach(b=>b.onclick=async()=>{
+    D.querySelectorAll(".stbar button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    try{await db.doc("requests/"+r.id).update({status:b.dataset.k,updatedAt:Date.now()});flash($("d-note"),`Moved to ${stLabel(b.dataset.k)}`);}
+    catch(e){flash($("d-note"),"Couldn't update the status. Try again.","err");}
+  });
+  $("d-save").onclick=async()=>{
+    try{await db.doc("requests/"+r.id).update({quote:{fee:$("d-fee").value.trim(),options:$("d-options").value.trim()},updatedAt:Date.now()});flash($("d-note"),"Quote saved");}
+    catch(e){flash($("d-note"),"Couldn't save. Check your connection and try again.","err");}
+  };
+  $("d-msg").onclick=()=>{
+    const t=r.trip||{},fee=$("d-fee").value.trim(),opts=$("d-options").value.trim();
+    const txt=`Hi ${(r.client?.name||"").split(" ")[0]||"there"}, here are the best award options I found for ${t.from} → ${t.to} (${t.cabin}):\n\n${opts||"[options]"}\n\n${fee?`My booking fee is ${fee.startsWith("$")?fee:"$"+fee}. `:""}Award space can disappear quickly, so let me know which one you'd like and I'll walk you through booking it.`;
+    const out=$("d-out");out.hidden=false;out.textContent=txt;copy(txt,$("d-note"),out);
+  };
+  $("d-del").onclick=async()=>{
+    const b=$("d-del");
+    if(b.dataset.confirm!=="1"){b.dataset.confirm="1";b.textContent="Tap again to delete";setTimeout(()=>{b.dataset.confirm="";b.textContent="Delete"},4000);return;}
+    try{await db.doc("requests/"+r.id).delete();closeDrawer();}catch(e){flash($("d-note"),"Couldn't delete. Try again.","err");}
+  };
+}
+$("openAdd").onclick=()=>{
+  openDrawer(`<div class="dr-head"><h3>Add a request</h3><button class="dr-x plain" type="button" aria-label="Close">${X_ICON}</button></div>
+    <div class="dr-body"><p class="hint">Paste the message a client sent you. Requests made on your client page import with every field filled in. Anything else is saved as notes for you to fill in.</p>
+    <textarea id="pasteBox" style="min-height:260px" placeholder="Paste the client's message here"></textarea></div>
+    <div class="dr-foot"><button class="btn small" type="button" id="importBtn">Add request</button><span id="importMsg"></span></div>`,"add");
+  $("pasteBox").focus();
+  $("importBtn").onclick=importReq;
+};
+function parseFree(text){
+  const codes=text.match(/\b[A-Z]{3}\b/g)||[];
+  return {client:{name:"New client",contact:""},trip:{from:codes[0]||"",to:codes[1]||"",depart:"",ret:"",oneway:false,flex:"",cabin:"",adults:1,kids:0},balances:[],notes:text.trim()};
+}
+async function importReq(){
+  const text=$("pasteBox").value;
+  if(!text.trim()){flash($("importMsg"),"Paste a client's message first.","err");return;}
+  let r,m=text.match(/TRIPREQ:([A-Za-z0-9+/=]+)/);
+  try{r=m?decode(m[1]):parseFree(text);}catch(e){r=parseFree(text);}
+  const id="r"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  try{
+    await db.doc("requests/"+id).set({...r,id,status:"new",createdAt:Date.now()});
+    filter=null;closeDrawer();setTimeout(()=>openReq(id),60);
+  }catch(e){flash($("importMsg"),"Couldn't add it. Check your connection and try again.","err");}
+}
+
+
+
+$("setForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  try{await db.doc("settings/profile").set({name:$("s-name").value.trim(),tag:$("s-tag").value.trim(),contact:$("s-contact").value.trim()});flash($("setMsg"),"Saved");}
+  catch(err){flash($("setMsg"),"Couldn't save. Try again.","err");}
+});
+
+/* ---------- boot ---------- */
+(async()=>{
+  if(!window.claude?.use)return;
+  const [user,d]=await Promise.all([claude.use("user"),claude.use("db")]);
+  db=d;
+  if(db){
+    db.doc("settings/profile").onSnapshot(s=>{
+      const v=s.exists?s.data():null;
+      settings={...DEFAULTS,...Object.fromEntries(Object.entries(v||{}).filter(([,x])=>x))};applySettings();
+      if(isOwner&&v){$("s-name").value=v.name||"";$("s-tag").value=v.tag||"";$("s-contact").value=v.contact||"";}
+    },()=>{});
+  }
+  isOwner=user?.isOwner()??false;
+  if(isOwner&&db){
+    show("client");$("ownerBtn").onclick=()=>show("dash");
+    db.collection("requests").onSnapshot(snap=>{
+      requests=snap.docs.map(x=>({...x.data(),id:x.id}));renderAll();
+    },()=>{$("reqList").innerHTML='<div class="empty">Requests couldn\'t load. Reload the page to try again.</div>';});
+  }
+})();
+})();
+</script>
+
+</body>
+</html>
