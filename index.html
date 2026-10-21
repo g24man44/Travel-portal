@@ -38,13 +38,13 @@
   --ok:#4dcb8b; --warn:#f0a73a; --new:#7fb3ef; --closed:#8b98aa; --danger:#ff7a6b;
   --shadow:0 1px 2px rgba(0,0,0,.3), 0 28px 56px -24px rgba(0,0,0,.75); color-scheme:dark}
 
-.ph-cgn{background-image:url(img/cgn.jpg)}
-.ph-han{background-image:url(img/han.jpg)}
-.ph-pek{background-image:url(img/pek.jpg)}
-.ph-syd{background-image:url(img/syd.jpg)}
-.ph-mco{background-image:url(img/mco.jpg)}
-.ph-buf{background-image:url(img/buf.jpg)}
-.ph-jfk{background-image:url(img/jfk.jpg)}
+.ph-cgn{background-image:url(cgn.jpg)}
+.ph-han{background-image:url(han.jpg)}
+.ph-pek{background-image:url(pek.jpg)}
+.ph-syd{background-image:url(syd.jpg)}
+.ph-mco{background-image:url(mco.jpg)}
+.ph-buf{background-image:url(buf.jpg)}
+.ph-jfk{background-image:url(jfk.jpg)}
 .ph{background-size:cover;background-position:center;background-color:var(--night)}
 .ph-mco{background-position:center 30%}
 .ph-jfk{background-position:center 35%}
@@ -1193,7 +1193,7 @@ function sendRequest(r){
   const body=new URLSearchParams({"form-name":"trip-request","bot-field":"",name:r.client.name,email:r.client.contact,phone:r.client.phone||"",
     route:`${t.from} to ${t.to}${t.oneway?" (one way)":" (round trip)"}`,depart:t.depart||"",return:t.ret||"",flexibility:t.flex||"",cabin:t.cabin||"",
     travelers:`${t.adults} adult(s), ${t.kids} child(ren)`,points:r.balances.map(b=>`${b.program||"Program"}: ${b.amount}`).join("; "),notes:r.notes||"",request:txt});
-  fetch("/",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body.toString()})
+  fetch(CFG.formEndpoint||"/",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded",Accept:"application/json"},body:body.toString()})
     .then(res=>{if(!res.ok)throw new Error(res.status);
       $("crStamp").textContent="Request sent";$("crTitle").textContent=`Thanks, ${(r.client.name||"").split(" ")[0]||"traveler"}. We've got it.`;
       $("sendTo").textContent=`Your trip details are on their way. You'll get a reply at ${r.client.contact}.`;$("newReq").hidden=false;$("editReq").hidden=true;})

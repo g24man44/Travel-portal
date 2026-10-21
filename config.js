@@ -5,6 +5,9 @@ window.ATD_CONFIG = {
   ratesApi: "",
   flightsApi: "/api/flights",
 
+  // Where trip requests are emailed. Paste your Formspree form link between the quotes.
+  formEndpoint: "",
+
   // Map tiles. OpenStreetMap's free tiles are fine for testing and light use.
   // For a busy site, make a free MapTiler account and swap in the commented lines.
   tiles: {
