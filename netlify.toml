@@ -1,9 +1,11 @@
 [build]
-  publish = "."
-  functions = "netlify/functions"
+  command = "node build.mjs"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
 
 [[redirects]]
   from = "/img/*"
   to = "/:splat"
   status = 200
-# Trigger a fresh Git-based deployment
