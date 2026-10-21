@@ -541,6 +541,8 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
 .rl-code b{font-family:var(--f-mono);font-weight:600;font-size:26px;letter-spacing:.04em}
 .rl-code small{font-size:13px;color:var(--muted)}
 .lother{margin:0;font-size:12.5px;color:var(--muted)}
+.est{margin:0 0 10px;font-size:13.5px;color:var(--muted);background:color-mix(in srgb,var(--gold) 10%,var(--paper));border:1px solid color-mix(in srgb,var(--gold) 35%,var(--line));border-radius:10px;padding:9px 12px}
+.est b{color:var(--ink)}
 .lcount{margin:0;font-size:13px;font-weight:700;color:var(--ok)}
 .rl-stop .lounges li{background:var(--bg)}
 .ltag{font-style:normal;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -885,7 +887,8 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
               <div class="fs-head"><span class="tag">iv.</span><h3>About you</h3></div>
               <div class="grid">
                 <label for="f-name">Name<input id="f-name" autocomplete="name" required></label>
-                <label for="f-contact">Phone or email<input id="f-contact" required></label>
+                <label for="f-contact">Email<input id="f-contact" type="email" autocomplete="email" required></label>
+                <label for="f-phone">Phone (optional)<input id="f-phone" type="tel" autocomplete="tel"></label>
                 <label class="full" for="f-notes">Anything else?<textarea id="f-notes" placeholder="Budget for taxes and fees, airlines you love or avoid, a special occasion…"></textarea></label>
               </div>
             </div>
@@ -895,11 +898,11 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
           </form>
 
           <div id="clientResult" hidden style="display:flex;flex-direction:column;gap:16px">
-            <span class="stamp">Request ready</span>
-            <h3>Last step: send it over</h3>
-            <p class="hint" id="sendTo">Copy your request and send it to the person who shared this page with you.</p>
-            <pre class="out" id="reqOut"></pre>
-            <div class="row"><button class="btn" type="button" id="copyReq">Copy request</button><button class="btn ghost" type="button" id="editReq">Edit</button><span id="copyMsg"></span></div>
+            <span class="stamp" id="crStamp">Sending</span>
+            <h3 id="crTitle">Sending your request…</h3>
+            <p class="hint" id="sendTo">One moment.</p>
+            <pre class="out" id="reqOut" hidden></pre>
+            <div class="row"><button class="btn" type="button" id="copyReq" hidden>Copy request</button><button class="btn ghost" type="button" id="editReq">Edit</button><button class="btn ghost" type="button" id="newReq" hidden>Start a new request</button><span id="copyMsg"></span></div>
           </div>
         </div>
 
@@ -1073,7 +1076,7 @@ $("f-oneway").onchange=e=>{$("f-return").disabled=e.target.checked;updateStub();
 function cabin(){return (document.querySelector('input[name="cabin"]:checked')||{}).value||"Business";}
 function collect(){
   const balances=[...$("balRows").children].map(r=>({program:r.children[0].value.trim(),amount:r.children[1].value.trim()})).filter(b=>b.program||b.amount);
-  return {client:{name:$("f-name").value.trim(),contact:$("f-contact").value.trim()},
+  return {client:{name:$("f-name").value.trim(),contact:$("f-contact").value.trim(),phone:$("f-phone").value.trim()},
     trip:{from:$("f-from").value.trim().toUpperCase(),to:$("f-to").value.trim().toUpperCase(),depart:$("f-depart").value,ret:$("f-oneway").checked?"":$("f-return").value,
       oneway:$("f-oneway").checked,flex:$("f-flex").value,cabin:cabin(),adults:+$("f-adults").value||1,kids:+$("f-kids").value||0},
     balances,notes:$("f-notes").value.trim()};
@@ -1104,7 +1107,7 @@ function encode(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o))));
 function decode(s){return JSON.parse(decodeURIComponent(escape(atob(s))));}
 function summary(r){
   const t=r.trip,pax=`${t.adults} adult${t.adults>1?"s":""}${t.kids?`, ${t.kids} child${t.kids>1?"ren":""}`:""}`;
-  const lines=[`AWARD TRIP REQUEST`,`${r.client.name}  (${r.client.contact})`,``,
+  const lines=[`AWARD TRIP REQUEST`,`${r.client.name}  (${r.client.contact}${r.client.phone?" · "+r.client.phone:""})`,``,
     `Route: ${t.from} → ${t.to}${t.oneway?" (one way)":" (round trip)"}`,
     `Depart: ${fmtDate(t.depart)}${t.ret?`   Return: ${fmtDate(t.ret)}`:""}`,
     `Flexibility: ${t.flex}`,`Cabin: ${t.cabin}`,`Travelers: ${pax}`,``,
@@ -1117,12 +1120,27 @@ $("reqForm").addEventListener("submit",e=>{
   e.preventDefault();
   const r=collect(),miss=[];
   if(!r.trip.from)miss.push("origin");if(!r.trip.to)miss.push("destination");if(!r.trip.depart)miss.push("departure date");
-  if(!r.client.name)miss.push("name");if(!r.client.contact)miss.push("phone or email");
+  if(!r.client.name)miss.push("name");if(!/\S+@\S+\.\S+/.test(r.client.contact))miss.push("email");
   if(miss.length){flash($("formMsg"),`Add your ${miss.join(", ")} to continue.`,"err");return;}
-  $("reqOut").textContent=summary(r);
+  sendRequest(r);
   $("reqForm").hidden=true;$("clientResult").hidden=false;
   $("plan").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});
 });
+function sendRequest(r){
+  const t=r.trip,txt=summary(r).replace(/\n\nRequest code:[\s\S]*$/,"");
+  $("reqOut").textContent=txt;$("reqOut").hidden=true;$("copyReq").hidden=true;$("newReq").hidden=true;
+  $("crStamp").textContent="Sending";$("crTitle").textContent="Sending your request…";$("sendTo").textContent="One moment.";
+  const body=new URLSearchParams({"form-name":"trip-request","bot-field":"",name:r.client.name,email:r.client.contact,phone:r.client.phone||"",
+    route:`${t.from} to ${t.to}${t.oneway?" (one way)":" (round trip)"}`,depart:t.depart||"",return:t.ret||"",flexibility:t.flex||"",cabin:t.cabin||"",
+    travelers:`${t.adults} adult(s), ${t.kids} child(ren)`,points:r.balances.map(b=>`${b.program||"Program"}: ${b.amount}`).join("; "),notes:r.notes||"",request:txt});
+  fetch("/",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body.toString()})
+    .then(res=>{if(!res.ok)throw new Error(res.status);
+      $("crStamp").textContent="Request sent";$("crTitle").textContent=`Thanks, ${(r.client.name||"").split(" ")[0]||"traveler"}. We've got it.`;
+      $("sendTo").textContent=`Your trip details are on their way. You'll get a reply at ${r.client.contact}.`;$("newReq").hidden=false;$("editReq").hidden=true;})
+    .catch(()=>{$("crStamp").textContent="Not sent";$("crTitle").textContent="We couldn't send it just now";
+      $("sendTo").textContent="Copy your request below and email it instead, or try again in a minute.";$("reqOut").hidden=false;$("copyReq").hidden=false;});
+}
+$("newReq").onclick=()=>{$("reqForm").reset();$("clientResult").hidden=true;$("reqForm").hidden=false;$("editReq").hidden=false;$("plan").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});};
 $("copyReq").onclick=()=>copy($("reqOut").textContent,$("copyMsg"),$("reqOut"));
 $("editReq").onclick=()=>{$("clientResult").hidden=true;$("reqForm").hidden=false;};
 
@@ -1624,7 +1642,22 @@ const CARCO={
   payless:{n:"Payless",u:"https://www.paylesscar.com"},ace:{n:"ACE Rent A Car",u:"https://www.acerentacar.com"},advantage:{n:"Advantage",u:"https://www.advantage.com"},turo:{n:"Turo (car sharing)",u:"https://turo.com"}
 };
 let stayMode="hotel";const hotelSel=new Set(),carSel=new Set();
-const hcVals={hilton:{cash:"100",pts:"15000"}};
+const hcVals={hilton:{cash:"200"},marriott:{cash:"200"},hyatt:{cash:"200"},ihg:{cash:"200"}};
+/* estimated award price per night from the cash rate */
+const HYATT_LEVELS=[3500,5000,6500,8000,9500,12000,15000,17000,20000,23000,25000,29000,30000,35000,40000,45000];
+function estPts(key,cashNight){
+  if(!cashNight)return null;const c=cashNight,r=(v,s)=>Math.max(s,Math.round(v/s)*s);
+  switch(key){
+    case"hilton":return{pts:Math.max(5000,r(c/0.005,1000)),how:"Hilton prices awards close to the cash rate, usually about 0.5¢ per point."};
+    case"marriott":return{pts:Math.max(5000,r(c/0.0075,500)),how:"Marriott prices awards by demand, usually about 0.75¢ per point."};
+    case"ihg":return{pts:Math.max(5000,r(c/0.0055,500)),how:"IHG prices awards by demand, usually about 0.55¢ per point."};
+    case"choice":return{pts:Math.max(6000,r(c/0.006,500)),how:"Choice awards usually work out to about 0.6¢ per point."};
+    case"hyatt":{const t=c/0.018;const lv=HYATT_LEVELS.reduce((a,b)=>Math.abs(b-t)<Math.abs(a-t)?b:a);return{pts:lv,how:"Hyatt uses a fixed award chart. This is the closest standard level for a hotel at this price."};}
+    case"wyndham":return{pts:c<150?7500:c<300?15000:30000,how:"Wyndham awards come in three levels: 7,500, 15,000 or 30,000 points a night."};
+    case"accor":return{pts:r(c/0.022,100),how:"Accor points have a fixed value: 2,000 points take €40 off."};
+    default:return null;
+  }
+}
 function cname(id){return CARDS.find(c=>c.id===id);}
 function cents(v){const r=Math.round(v*100)/100;return (r%1?r.toFixed(2).replace(/0$/,""):String(r))+"¢";}
 function hratio(r){return r===2?"1:2":r===1?"1:1":r===0.5?"2:1":r===0.667?"3:2":"1:"+r;}
@@ -1634,7 +1667,7 @@ function chips(host,keys,names,sel,onChange,allLabel){
 }
 function hotelRows(key,cash,pts,nights){
   const H=HOTELS[key],paid=H.free5?nights-Math.floor(nights/5):nights,cashT=cash*nights,ptsT=pts*paid,rows=[];
-  if(pts)rows.push({t:`Use ${H.short} points`,v:ptsT,u:`${H.short} pts`,c:cash?cashT/ptsT*100:0});
+  if(pts)rows.push({t:`Use ${H.short} points${toNum((hcVals[key]||{}).pts)?"":" (estimate)"}`,v:ptsT,u:`${H.short} pts`,c:cash?cashT/ptsT*100:0});
   if(pts)pcards.forEach(id=>{const r=H.r[id];if(!r)return;const cp=Math.ceil(ptsT/r/1000)*1000;rows.push({t:`Transfer ${cname(id).name} → ${H.short}`,v:cp,u:cname(id).unit,c:cash?cashT/cp*100:0});});
   if(cash)pcards.forEach(id=>{const P=PORTAL[id];if(!P||!P.h)return;const lo=Math.ceil(cashT/(P.h[1]/100)),hi=Math.ceil(cashT/(P.h[0]/100));rows.push({t:`Pay cash price with ${cname(id).name} points`,v:lo,hi,u:cname(id).unit,c:P.h[1],via:P.how});});
   rows.sort((a,b)=>a.v-b.v);
@@ -1642,11 +1675,13 @@ function hotelRows(key,cash,pts,nights){
 }
 function renderHotelOut(key){
   const el=$("hco-"+key);if(!el)return;
-  const v=hcVals[key]||{},cash=toNum(v.cash),pts=toNum(v.pts),nights=Math.max(1,+$("hs-nights").value||1);
-  if(!cash&&!pts){el.innerHTML=`<p class="hint">Enter the cash and points price for a hotel you like to see the cheapest way to pay.</p>`;return;}
+  const v=hcVals[key]||{},cash=toNum(v.cash),typed=toNum(v.pts),nights=Math.max(1,+$("hs-nights").value||1);
+  const est=!typed&&cash?estPts(key,cash):null,pts=typed||(est?est.pts:0);
+  const pin=document.querySelector(`.ch-in input[data-k="${key}"][data-f="pts"]`);if(pin)pin.placeholder=est?`About ${est.pts.toLocaleString()}`:"0";
+  if(!cash&&!pts){el.innerHTML=`<p class="hint">Enter the nightly cash price for a hotel you like. We'll estimate the points price and show the cheapest way to pay.</p>`;return;}
   const H=HOTELS[key],{rows,cashT,ptsT,paid}=hotelRows(key,cash,pts,nights);
-  const val=pts&&cash?cashT/ptsT*100:null;
-  el.innerHTML=`<ol class="mini">${rows.map((r,i)=>`<li class="${i===0?"best":""}"><span>${esc(r.t)}${r.via?`<small>${esc(r.via)}</small>`:""}</span><b>${r.hi&&r.hi!==r.v?`${fk(r.v)}–${fk(r.hi)}`:fk(r.v)} <small>${esc(r.u)}</small></b></li>`).join("")}</ol>
+  const val=typed&&cash?cashT/ptsT*100:null;
+  el.innerHTML=`${v.auto?`<p class="hint">Cash price is the typical ${esc(H.short)} rate we found for your dates. Change it if you have a specific hotel in mind.</p>`:""}${est?`<p class="est"><b>About ${est.pts.toLocaleString()} ${esc(H.short)} points a night</b> (estimate). ${esc(est.how)} Type the real points price if you see one.</p>`:""}<ol class="mini">${rows.map((r,i)=>`<li class="${i===0?"best":""}"><span>${esc(r.t)}${r.via?`<small>${esc(r.via)}</small>`:""}</span><b>${r.hi&&r.hi!==r.v?`${fk(r.v)}–${fk(r.hi)}`:fk(r.v)} <small>${esc(r.u)}</small></b></li>`).join("")}</ol>
    ${val&&H.val?`<p class="hint">${esc(H.short)} points are worth <b>${cents(val)}</b> each here, vs. about ${cents(H.val)} usually. ${val>=H.val?"A good use of hotel points.":"Paying with card points or cash is likely better."}</p>`:""}
    ${paid<nights?`<p class="hint">Includes the free 5th night on award stays.</p>`:""}`;
 }
@@ -1654,6 +1689,7 @@ function renderHotels(){
   const city=$("hs-city").value.trim(),keys=Object.keys(HOTELS);
   chips($("h-filter"),[...keys,"other"],Object.assign(Object.fromEntries(keys.map(k=>[k,HOTELS[k].short])),{other:"Independent & other"}),hotelSel,()=>{renderHotels();updateJump();clampList("h-results",3,"hotel brands");},"All brands");
   const show=keys.filter(k=>!hotelSel.size||hotelSel.has(k));
+  show.forEach(k=>{if(hcVals[k]&&hcVals[k].typed)return;const m=brandMedian(k);if(m)hcVals[k]={cash:String(m),auto:true};});
   const gmap=q=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
   $("h-map").innerHTML=city?`<div class="hmap"><div class="hmap-art" aria-hidden="true"><span class="pin p1"></span><span class="pin p2"></span><span class="pin p3"></span><span class="pin p4"></span><span class="pin p5"></span></div>
     <div class="hmap-body"><small>Map view</small><b>See every hotel in ${esc(city)} on a map</b><p>See every hotel in the area with nightly prices, including independent hotels, then compare the best way to pay with your cards.</p>
@@ -1671,10 +1707,10 @@ function renderHotels(){
       <div class="ch-links"><a class="btn small" href="${g}" target="_blank" rel="noopener">${city?`Find ${esc(H.short)} hotels in ${esc(city)}`:`Find ${esc(H.short)} hotels`}</a><button type="button" class="btn ghost small" data-hmapbrand="${k}">Map</button><a class="btn ghost small" href="${H.u}" target="_blank" rel="noopener">${esc(H.u.replace(/^https:\/\/(www\.)?/,""))}</a></div></div>
       <div class="ch-facts"><div><small>Transfer from your cards</small><b>${mine.length?esc(mine.join(" · ")):"None of your cards"}</b>${others.length?`<span>Also from ${esc(others.join(", "))}</span>`:""}${note?`<span>${esc(note)}</span>`:""}</div>
       <div><small>Your status here</small><b>${st.length?st.map(s=>`${esc(s.t)} <span class="via">with ${esc(s.p.name)}</span>`).join("<br>"):"—"}</b></div></div>
-      <details class="ch-calc"${v.cash||v.pts?" open":""}><summary>Compare cash vs. points for a hotel</summary>
-        <div class="ch-in"><label>Cash per night<input inputmode="decimal" data-k="${k}" data-f="cash" value="${esc(v.cash||"")}" placeholder="$"></label><label>Points per night<input inputmode="numeric" data-k="${k}" data-f="pts" value="${esc(v.pts||"")}" placeholder="0"></label></div>
+      <details class="ch-calc"${v.cash||v.pts?" open":""}><summary>Cash vs. points for a hotel</summary>
+        <div class="ch-in"><label>Cash per night<input inputmode="decimal" data-k="${k}" data-f="cash" value="${esc(v.cash||"")}" placeholder="$"></label><label>Points per night (optional)<input inputmode="numeric" data-k="${k}" data-f="pts" value="${esc(v.pts||"")}" placeholder="0"></label></div>
         <div id="hco-${k}"></div></details></article>`;}).join("")||`<div class="ps-empty">Independent hotels show on the map. Tap “Map of every hotel.”</div>`;
-  $("h-results").querySelectorAll(".ch-in input").forEach(inp=>inp.addEventListener("input",()=>{const k=inp.dataset.k;hcVals[k]=hcVals[k]||{};hcVals[k][inp.dataset.f]=inp.value;renderHotelOut(k);}));
+  $("h-results").querySelectorAll(".ch-in input").forEach(inp=>inp.addEventListener("input",()=>{const k=inp.dataset.k;hcVals[k]=hcVals[k]||{};hcVals[k][inp.dataset.f]=inp.value;hcVals[k].typed=true;hcVals[k].auto=false;renderHotelOut(k);}));
   show.forEach(renderHotelOut);
   $("h-results").querySelectorAll("[data-hmapbrand]").forEach(b=>b.onclick=()=>{hotelSel.clear();hotelSel.add(b.dataset.hmapbrand);setHView("map");renderHotels();$("sec-hotels").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});});
   renderSide($("h-side"),"hotel",[]);$("h-title").textContent=city?`Hotels in ${city}`:"Hotels";
@@ -1764,12 +1800,14 @@ function hotelCardHTML(h,nights){
   return `<button type="button" class="mv-item" data-id="${esc(h.id)}">${h.photo?`<img src="${esc(h.photo)}" alt="" loading="lazy">`:`<span class="mv-ph" aria-hidden="true">${esc(brandName(b).slice(0,1))}</span>`}
     <span class="mv-txt"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.stars?` · ${"★".repeat(Math.round(h.stars))}`:""}</small>
     ${tr.length?`<small class="mv-tr">Transfer: ${esc(tr.join(" · "))}</small>`:""}</span>
-    <span class="mv-price">${per?`<b>$${Math.round(per).toLocaleString()}</b><small>per night</small>${bp?`<small>or ${fk(bp.pts)} ${esc(cname(bp.id).unit)}</small>`:""}`:`<small>${pend?"Getting price…":"Zoom in for price"}</small>`}</span></button>`;
+    <span class="mv-price">${per?`<b>$${Math.round(per).toLocaleString()}</b><small>per night</small>${HOTELS[b]&&estPts(b,per)?`<small>≈ ${fk(estPts(b,per).pts)} ${esc(brandName(b))} pts</small>`:""}${bp?`<small>or ${fk(bp.pts)} ${esc(cname(bp.id).unit)}</small>`:""}`:`<small>${pend?"Getting price…":"Zoom in for price"}</small>`}</span></button>`;
 }
 function popupHTML(h,nights){
   const b=hb(h),total=priceOf(h),per=total?total/nights:null;
+  const est=per?estPts(b,per):null,H=HOTELS[b];
+  const xfer=est&&H?[...pcards].filter(id=>H.r[id]).map(id=>`<li>Transfer about ${fk(Math.ceil(est.pts*nights/H.r[id]/1000)*1000)} ${esc(cname(id).unit)} to ${esc(H.short)}</li>`).join(""):"";
   const pays=total?[...pcards].map(id=>{const P=PORTAL[id];if(!P||!P.h)return"";const lo=Math.ceil(total/(P.h[1]/100)),hi=Math.ceil(total/(P.h[0]/100));return `<li>${esc(cname(id).name)}: ${lo===hi?fk(lo):fk(lo)+"–"+fk(hi)} points</li>`;}).join(""):"";
-  return `<div class="pop"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.address?` · ${esc(h.address)}`:""}</small>${per?`<p>$${Math.round(per).toLocaleString()} per night · $${Math.round(total).toLocaleString()} total</p>`:`<p class="hint">No price for these dates yet</p>`}${pays?`<ul>${pays}</ul>`:""}${HOTELS[b]?`<button type="button" class="btn small" data-compare="${b}" data-per="${per?Math.round(per):""}">Compare with ${esc(brandName(b))} points</button>`:""}</div>`;
+  return `<div class="pop"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.address?` · ${esc(h.address)}`:""}</small>${per?`<p>$${Math.round(per).toLocaleString()} per night · $${Math.round(total).toLocaleString()} total</p>`:`<p class="hint">No price for these dates yet</p>`}${est?`<p class="est" style="margin:6px 0"><b>About ${fk(est.pts)} ${esc(brandName(b))} points a night</b> (estimate)</p>`:""}${pays||xfer?`<ul>${pays}${xfer}</ul>`:""}${HOTELS[b]?`<button type="button" class="btn small" data-compare="${b}" data-per="${per?Math.round(per):""}">Compare with ${esc(brandName(b))} points</button>`:""}</div>`;
 }
 function filteredHotels(){return hdata.hotels.filter(h=>!hotelSel.size||hotelSel.has(hb(h)));}
 function renderMvList(){
@@ -1842,6 +1880,11 @@ function setHView(v){
 document.querySelectorAll("#h-view button").forEach(b=>b.onclick=()=>setHView(b.dataset.v));
 $("hs-city").addEventListener("input",()=>{if(hview!=="map")return;clearTimeout(hTimer);hTimer=setTimeout(loadHotels,700);});
 ["hs-nights","hs-in"].forEach(id=>$(id).addEventListener("input",()=>{if(hview!=="map")return;refreshIcons();renderMvList();clearTimeout(pTimer);pTimer=setTimeout(fetchVisiblePrices,500);}));
+
+function brandMedian(k){
+  const n=Math.max(1,+$("hs-nights").value||1),v=hdata.hotels.filter(h=>hb(h)===k).map(h=>priceOf(h)).filter(x=>typeof x==="number").map(x=>x/n).sort((a,b)=>a-b);
+  return v.length?Math.round(v[Math.floor(v.length/2)]):null;
+}
 
 /* ---------- map + planner glue ---------- */
 let hsTouched=false,csTouched=false,lastTo="",jmap=null;
@@ -2124,5 +2167,9 @@ $("setForm").addEventListener("submit",async e=>{
 })();
 </script>
 
+<form name="trip-request" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input name="bot-field"><input name="name"><input name="email"><input name="phone"><input name="route"><input name="depart"><input name="return">
+  <input name="flexibility"><input name="cabin"><input name="travelers"><input name="points"><textarea name="notes"></textarea><textarea name="request"></textarea>
+</form>
 </body>
 </html>
