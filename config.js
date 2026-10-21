@@ -2,7 +2,7 @@
 window.ATD_CONFIG = {
   // Where the hotel search lives. Leave as is on Netlify.
   hotelsApi: "/api/hotels",
-  ratesApi: "/api/rates",
+  ratesApi: "",
   flightsApi: "/api/flights",
 
   // Map tiles. OpenStreetMap's free tiles are fine for testing and light use.

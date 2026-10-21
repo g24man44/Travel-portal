@@ -1847,7 +1847,7 @@ const BRANDKW={hilton:["hilton","doubletree","hampton","embassy suites","conrad"
  choice:["comfort inn","comfort suites","quality inn","sleep inn","clarion","cambria","econo lodge","rodeway","mainstay","ascend","radisson","country inn"],
  accor:["sofitel","novotel","ibis","mercure","pullman","fairmont","raffles","swissotel","swissôtel","mgallery","mövenpick","movenpick","adagio","mama shelter","25hours","rixos"],iprefer:[]};
 function brandOf(name){const n=" "+(name||"").toLowerCase()+" ";for(const k in BRANDKW)if(BRANDKW[k].some(w=>n.includes(w)))return k;return"other";}
-function hb(h){return h.brand||brandOf(h.name);}
+function hb(h){return h.brand||brandOf(h.name+" "+(h.chain||""));}
 function brandName(k){return HOTELS[k]?HOTELS[k].short:"Independent";}
 function cityParts(city){const m=city.match(/^(.*?),\s*([A-Za-z]{2})$/);const name=(m?m[1]:city).trim();return{name,country:(m?m[2]:(CC[name]||"US")).toUpperCase()};}
 function cityCenter(name){const p=PINS.find(x=>x.n.toLowerCase()===name.toLowerCase());return p?{lat:p.lat,lng:p.lon}:null;}
@@ -1856,7 +1856,10 @@ let hview="list",hdata={key:"",hotels:[],source:""},hmapObj=null,hlayer=null,hma
 const priceCache={};
 (function initCheckin(){const t=new Date();t.setDate(t.getDate()+30);$("hs-in").value=t.toISOString().slice(0,10);})();
 function stayKey(){const n=Math.max(1,+$("hs-nights").value||1),ci=$("hs-in").value;return `${ci}|${n}`;}
-function priceOf(h){if(h.demo)return h.price;const v=priceCache[stayKey()+"|"+h.id];return typeof v==="number"?v:null;}
+const TYP_STAR={1:75,2:105,3:155,4:235,5:410},TYP_BRAND={hilton:185,marriott:200,hyatt:215,ihg:170,accor:165,wyndham:115,choice:120,iprefer:260,other:150};
+function isTyp(h){return hdata.source==="osm"&&!h.demo;}
+function typicalNight(h){const s=Math.round(h.stars||0);let v=TYP_STAR[s]||TYP_BRAND[hb(h)]||150;if(s&&TYP_BRAND[hb(h)]&&hb(h)!=="other")v=Math.round((v*2+TYP_BRAND[hb(h)])/3);return Math.round(v/5)*5;}
+function priceOf(h){if(h.demo)return h.price;if(isTyp(h))return typicalNight(h)*Math.max(1,+$("hs-nights").value||1);const v=priceCache[stayKey()+"|"+h.id];return typeof v==="number"?v:null;}
 function demoHotels(city){
   const c=cityCenter(cityParts(city).name)||{lat:40.754,lng:-73.984},bs=["hilton","marriott","hyatt","ihg","accor","wyndham","choice","other","marriott","hilton"];
   return bs.map((b,i)=>({id:"demo"+i,brand:b,name:`Example ${b==="other"?"boutique":brandName(b)} hotel ${i+1}`,lat:c.lat+Math.sin(i*2.3)*0.022,lng:c.lng+Math.cos(i*1.7)*0.032,stars:3+(i%3),address:"Example address",photo:"",price:(150+((i*53)%260))*(+$("hs-nights").value||1),demo:true}));
@@ -1868,9 +1871,9 @@ async function loadHotels(){
   const {name,country}=cityParts(city);
   try{
     const r=await fetch(`${CFG.hotelsApi}?`+new URLSearchParams({city:name,country}));
-    const j=await r.json();if(j.error||!Array.isArray(j.hotels))throw new Error(j.error||"bad_response");
+    let j;try{j=JSON.parse(await r.text());}catch(_){throw new Error("not_deployed");}if(j.error||!Array.isArray(j.hotels))throw new Error((j.error||"bad_response")+(j.status?" "+j.status:""));
     if(key!==$("hs-city").value.trim().toLowerCase())return;
-    hdata={key,hotels:j.hotels.filter(h=>h.lat&&h.lng),source:"live",total:j.total||j.hotels.length};
+    hdata={key,hotels:j.hotels.filter(h=>h.lat&&h.lng),source:j.source==="osm"?"osm":"live",total:j.total||j.hotels.length};
   }catch(e){hdata={key,hotels:demoHotels(city),source:"demo",err:String(e.message||e)};}
   hotelsRefresh(true);loadAllPrices();
 }
@@ -1897,7 +1900,7 @@ function hotelCardHTML(h,nights){
   return `<button type="button" class="mv-item" data-id="${esc(h.id)}">${h.photo?`<img src="${esc(h.photo)}" alt="" loading="lazy">`:`<span class="mv-ph" aria-hidden="true">${esc(brandName(b).slice(0,1))}</span>`}
     <span class="mv-txt"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.stars?` · ${"★".repeat(Math.round(h.stars))}`:""}</small>
     ${tr.length?`<small class="mv-tr">Transfer: ${esc(tr.join(" · "))}</small>`:""}</span>
-    <span class="mv-price">${per?`<b>$${Math.round(per).toLocaleString()}</b><small>per night</small>${HOTELS[b]&&estPts(b,per)?`<small>≈ ${fk(estPts(b,per).pts)} ${esc(brandName(b))} pts</small>`:""}${bp?`<small>or ${fk(bp.pts)} ${esc(cname(bp.id).unit)}</small>`:""}`:`<small>${pend?"Getting price…":"Zoom in for price"}</small>`}</span></button>`;
+    <span class="mv-price">${per?`<b>${isTyp(h)?"~":""}$${Math.round(per).toLocaleString()}</b><small>${isTyp(h)?"typical a night":"per night"}</small>${HOTELS[b]&&estPts(b,per)?`<small>≈ ${fk(estPts(b,per).pts)} ${esc(brandName(b))} pts</small>`:""}${bp?`<small>or ${fk(bp.pts)} ${esc(cname(bp.id).unit)}</small>`:""}`:`<small>${pend?"Getting price…":"Zoom in for price"}</small>`}</span></button>`;
 }
 function popupHTML(h,nights){
   const b=hb(h),total=priceOf(h),per=total?total/nights:null;
@@ -1941,7 +1944,7 @@ function wireCompare(root){root.querySelectorAll("[data-compare]").forEach(b=>b.
   const card=[...document.querySelectorAll("#h-results .chain")].find(c=>c.querySelector("h4").textContent===brandName(k));
   if(card){card.hidden=false;const d=card.querySelector("details");if(d)d.open=true;card.scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"});const inp=card.querySelector('input[data-f="pts"]');if(inp)setTimeout(()=>inp.focus({preventScroll:true}),400);}});}
 function iconFor(h){const nights=Math.max(1,+$("hs-nights").value||1),t=priceOf(h);
-  return L.divIcon({className:"",html:`<span class="mk${h.demo?" demo":""}${t?"":" dot"}">${t?"$"+Math.round(t/nights).toLocaleString():""}</span>`,iconSize:null});}
+  return L.divIcon({className:"",html:`<span class="mk${h.demo?" demo":""}${t?"":" dot"}">${t?(isTyp(h)?"~$":"$")+Math.round(t/nights).toLocaleString():""}</span>`,iconSize:null});}
 function refreshIcons(){if(!window.L)return;hdata.hotels.forEach(h=>{const m=hmarkers[h.id];if(m&&m.setIcon)m.setIcon(iconFor(h));});}
 function drawMap(shown,fit){
   const box=$("mv-map"),nights=Math.max(1,+$("hs-nights").value||1);
@@ -2018,15 +2021,20 @@ function hlItemHTML(h,nights){
   const b=hb(h),H=HOTELS[b],total=priceOf(h),per=total?total/nights:null,pend=priceCache[stayKey()+"|"+h.id]==="pending";
   const tr=H?[...pcards].filter(id=>H.r[id]).map(id=>`${cname(id).name} ${hratio(H.r[id])}`):[],st=statusFor(b);
   const best=bestPoints(h),est=per&&H?estPts(b,per):null;
-  const book=H&&["hilton","marriott","hyatt"].includes(b)?brandSearch(b,h.name):`https://www.google.com/travel/search?q=${encodeURIComponent(h.name+" "+$("hs-city").value.trim())}`;
+  const book=H&&["hilton","marriott","hyatt"].includes(b)?brandSearch(b,h.name):(h.web&&/^https?:\/\//.test(h.web)?h.web:`https://www.google.com/travel/search?q=${encodeURIComponent(h.name+" "+$("hs-city").value.trim())}`),typ=isTyp(h);
   return `<article class="hl" data-id="${esc(h.id)}">
     ${h.photo?`<img src="${esc(h.photo)}" alt="" loading="lazy">`:`<span class="hl-ph" aria-hidden="true">${esc(brandName(b).slice(0,1))}</span>`}
     <div class="hl-main"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.stars?` · ${"★".repeat(Math.round(h.stars))}`:""}</small>${h.address?`<small>${esc(h.address)}</small>`:""}
       <div class="hl-tags">${tr.length?`<span class="mtag ok">Transfer: ${esc(tr.join(" · "))}</span>`:""}${st.map(x=>`<span class="mtag">${esc(x.t)} with ${esc(x.p.name)}</span>`).join("")}</div></div>
-    <div class="hl-price">${per?`<b>$${Math.round(per).toLocaleString()}</b><small>per night · $${Math.round(total).toLocaleString()} total</small>${best?`<span class="hl-pts">${fk(best.pts)} ${esc(best.unit)}</span><small>${esc(best.how)}</small>`:""}${est?`<small>≈ ${fk(est.pts)} ${esc(H.short)} pts a night</small>`:""}`:`<small>${pend?"Getting price…":hdata.source==="live"?"No rooms for these dates":"—"}</small>`}
+    <div class="hl-price">${per?`<b>${typ?"~":""}$${Math.round(per).toLocaleString()}</b><small>${typ?`typical a night · about $${Math.round(total).toLocaleString()} total`:`per night · $${Math.round(total).toLocaleString()} total`}</small>${best?`<span class="hl-pts">${fk(best.pts)} ${esc(best.unit)}</span><small>${esc(best.how)}</small>`:""}${est?`<small>≈ ${fk(est.pts)} ${esc(H.short)} pts a night</small>`:""}`:`<small>${pend?"Getting price…":hdata.source==="live"?"No rooms for these dates":"—"}</small>`}
       <div class="hl-acts"><a class="btn small" href="${book}" target="_blank" rel="noopener">Book this hotel</a><button type="button" class="btn ghost small" data-hlmap="${esc(h.id)}">Map</button>${H?`<button type="button" class="btn ghost small" data-compare="${b}" data-per="${per?Math.round(per):""}">Ways to pay</button>`:""}</div></div>
   </article>`;
 }
+function hotelErrText(e){e=String(e||"");
+  if(e==="not_deployed")return "The hotel search file isn't running on your site yet (netlify/functions/hotels.mjs is missing or in the wrong folder).";
+  if(e==="missing_key")return "Your site can't see the LITEAPI_KEY setting. Check the name is exact, then redeploy.";
+  if(e.startsWith("hotel_list_failed"))return `LiteAPI turned the request down (code ${esc(e.split(" ")[1]||"?")}). The key may be wrong or not active.`;
+  return `Hotel search hit a problem (${esc(e)}).`;}
 function renderHList(){
   const wrap=$("h-listview");if(!wrap||hview!=="list")return;
   const city=$("hs-city").value.trim(),note=$("hl-note"),list=$("hl-list"),nights=Math.max(1,+$("hs-nights").value||1);
@@ -2037,7 +2045,7 @@ function renderHList(){
   const cmp={rec:(a,b)=>recScore(b)-recScore(a),plow:(a,b)=>(P(a)??1e12)-(P(b)??1e12),phigh:(a,b)=>(P(b)??-1)-(P(a)??-1),stars:(a,b)=>(b.stars||0)-(a.stars||0)||(P(a)??1e12)-(P(b)??1e12),pts:(a,b)=>((bestPoints(a)||{}).pts??1e12)-((bestPoints(b)||{}).pts??1e12)}[hlSort];
   items.sort(cmp);
   const sk=stayKey(),priced=hdata.hotels.filter(h=>typeof priceCache[sk+"|"+h.id]==="number"||h.demo).length,pending=hdata.hotels.filter(h=>priceCache[sk+"|"+h.id]==="pending").length;
-  note.innerHTML=hdata.source==="demo"?`<b>Example hotels.</b> Add your hotel data key to show every real hotel and price.`:`<b>${items.length.toLocaleString()} hotels</b> in ${esc(city)} · ${priced.toLocaleString()} with prices for ${nights} night${nights>1?"s":""}${pending?` · <span class="mv-dot"></span>loading more prices…`:""}`;
+  note.innerHTML=hdata.source==="osm"?`<b>${items.length.toLocaleString()} hotels</b> in ${esc(city)} · prices marked ~ are typical rates for that hotel type, and points are estimated from them. Tap <b>Book this hotel</b> for the live price.`:hdata.source==="demo"?`<b>Example hotels.</b> ${hotelErrText(hdata.err)}`:`<b>${items.length.toLocaleString()} hotels</b> in ${esc(city)} · ${priced.toLocaleString()} with prices for ${nights} night${nights>1?"s":""}${pending?` · <span class="mv-dot"></span>loading more prices…`:""}`;
   list.innerHTML=items.slice(0,hlShown).map(h=>hlItemHTML(h,nights)).join("")||`<div class="ps-empty">No hotels match these filters.</div>`;
   $("hl-more").hidden=items.length<=hlShown;$("hl-more").textContent=`Show more hotels (${(items.length-hlShown).toLocaleString()} left)`;
   list.querySelectorAll("[data-hlmap]").forEach(b=>b.onclick=()=>{setHView("map");setTimeout(()=>focusHotel(b.dataset.hlmap),400);});
