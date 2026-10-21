@@ -509,6 +509,8 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
 .pop ul{margin:0 0 10px;padding-left:16px;font-size:13px}
 .leaflet-container{font-family:var(--f-body);background:var(--bg)}
 .leaflet-popup-content{margin:12px 14px}
+.pop-acts{display:flex;gap:6px;flex-wrap:wrap}
+.pop-acts .btn{text-decoration:none}
 .hmap{display:grid;grid-template-columns:220px minmax(0,1fr);border:1px solid var(--line);border-radius:20px;overflow:hidden;background:var(--paper)}
 @media (max-width:640px){.hmap{grid-template-columns:minmax(0,1fr)}.hmap-art{height:120px}}
 .hmap-art{position:relative;min-height:150px;background:
@@ -543,6 +545,16 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
 .lother{margin:0;font-size:12.5px;color:var(--muted)}
 .est{margin:0 0 10px;font-size:13.5px;color:var(--muted);background:color-mix(in srgb,var(--gold) 10%,var(--paper));border:1px solid color-mix(in srgb,var(--gold) 35%,var(--line));border-radius:10px;padding:9px 12px}
 .est b{color:var(--ink)}
+.pr-link{margin:4px 0 0;font-size:11.5px;color:var(--muted);text-align:right}
+@media (max-width:640px){.pr-link{text-align:left}}
+.cashfare{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.cashfare small{font-size:12.5px;color:var(--muted);margin-right:4px}
+.cashfare .fchip{text-decoration:none}
+.mini li a{font-size:12px;font-weight:700;color:var(--gold);text-decoration:none;white-space:nowrap}
+.footnav{display:flex;flex-wrap:wrap;gap:4px 16px}
+.footnav a{color:var(--ink);font-weight:600;text-decoration:none}
+.footnav a:hover{color:var(--gold)}
+.perk-link{font-size:12.5px;font-weight:600;color:var(--gold);text-decoration:none}
 .lcount{margin:0;font-size:13px;font-weight:700;color:var(--ok)}
 .rl-stop .lounges li{background:var(--bg)}
 .ltag{font-style:normal;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -563,6 +575,7 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
 @media (max-width:560px){.mode{align-self:stretch}.mode button{flex:1;padding:9px 8px;font-size:14px;gap:6px}}
 @media (max-width:400px){.mode button svg{display:none}}
 .sbox .grow{flex:1 1 260px}
+.sbox .ps-dt{flex:0 1 160px}
 .tb-chip[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);background:var(--paper)}
 @media (max-width:640px){.clientnav{display:none}.hero-in{padding-top:92px}.ownerbtn{padding:7px 12px;font-size:12.5px}}
 
@@ -713,6 +726,8 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
             </div>
             <div class="ps-step"><small>Cabin</small><div class="tog" id="ps-cabin"><button type="button" data-v="e" aria-pressed="false">Economy</button><button type="button" data-v="b" aria-pressed="true">Business</button><button type="button" data-v="f" aria-pressed="false">First</button></div></div>
             <div class="ps-step"><small>Trip</small><div class="tog" id="ps-trip"><button type="button" data-v="ow" aria-pressed="true">One way</button><button type="button" data-v="rt" aria-pressed="false">Round trip</button><button type="button" data-v="mc" aria-pressed="false">Multi-city</button></div></div>
+            <label for="ps-date" class="ps-dt">Depart<input id="ps-date" type="date"></label>
+            <label for="ps-ret" class="ps-dt" id="ps-ret-wrap" hidden>Return<input id="ps-ret" type="date"></label>
             <label for="ps-pax" class="ps-pax">Travelers<input id="ps-pax" type="number" min="1" max="9" value="1"></label>
             <button class="btn sbtn" type="button" id="goSearch">Search<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2.4"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>
           </div>
@@ -930,7 +945,9 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
     </div>
   </section>
 
-  <footer class="gut"><div class="inner"><span class="brand" id="footName">Award Trip Desk</span><span>Award seats aren't guaranteed until they're booked.</span></div></footer>
+  <footer class="gut"><div class="inner"><span class="brand" id="footName">Award Trip Desk</span>
+    <nav class="footnav" aria-label="Footer"><a href="#sec-flights" data-go="flights">Flights</a><a href="#sec-hotels" data-go="hotels">Hotels</a><a href="#sec-cars" data-go="cars">Rental cars</a><a href="#destinations">Explore</a><a href="#how">How it works</a><a href="#help">Get expert help</a></nav>
+    <span>Points prices are typical saver prices and estimates. Award seats aren't guaranteed until they're booked.</span></div></footer>
 </main>
 
 <datalist id="airports">
@@ -1269,7 +1286,7 @@ function renderSide(el,cat,aps){
   const prods=myProducts();
   const label={air:"Travel perks",hotel:"Hotel perks",car:"Rental car perks"}[cat];
   let html=`<div class="side-card"><h5>${label} with your cards</h5>${prods.map(p=>{const items=p[cat]||[];
-    return `<div class="perk"><div class="perk-h"><b>If you have ${esc(p.name)}</b>${p.fee?`<small>${esc(p.fee)}</small>`:""}</div>${items.length?`<ul>${items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:`<p class="hint">No special ${cat==="air"?"travel":cat==="hotel"?"hotel":"rental car"} perks.</p>`}</div>`;}).join("")}</div>`;
+    return `<div class="perk"><div class="perk-h"><b>If you have ${esc(p.name)}</b>${p.fee?`<small>${esc(p.fee)}</small>`:""}</div>${XFER[p.card]?`<a class="perk-link" href="${XFER[p.card]}" target="_blank" rel="noopener">Sign in to see your benefits →</a>`:""}${items.length?`<ul>${items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:`<p class="hint">No special ${cat==="air"?"travel":cat==="hotel"?"hotel":"rental car"} perks.</p>`}</div>`;}).join("")}</div>`;
   const seen=new Set();
   aps.forEach(a=>{a=(a||"").trim().toUpperCase();if(!a||seen.has(a)||!/^[A-Z]{3}$/.test(a))return;seen.add(a);
     html+=`<div class="side-card"><h5>Lounges at ${esc(a)}</h5>${loungeHTML(a)}</div>`;});
@@ -1330,6 +1347,30 @@ const PROGS={
   southwest:{n:"Southwest Rapid Rewards",a:"Independent",u:"https://www.southwest.com",r:{mb:0.4167,chase:1,bilt:1}},
   jetblue:{n:"JetBlue TrueBlue",a:"Independent",u:"https://www.jetblue.com",r:{wf:1,c1:0.6,chase:1,amex:0.8,citi:1,bilt:1}}
 };
+const PSHORT={aeroplan:"Aeroplan",lifemiles:"LifeMiles",turkish:"Turkish Airlines",united:"United",singapore:"Singapore Airlines",eva:"EVA Air",flyingblue:"Flying Blue",virgin:"Virgin Atlantic",delta:"Delta",aeromexico:"Aeromexico",ba:"British Airways",iberia:"Iberia",aerlingus:"Aer Lingus",qatar:"Qatar Airways",aa:"American",atmos:"Alaska",jal:"JAL",cathay:"Cathay Pacific",qantas:"Qantas",emirates:"Emirates",etihad:"Etihad",tap:"TAP",southwest:"Southwest",jetblue:"JetBlue"};
+const AWARD_PAGE={lifemiles:"https://www.lifemiles.com/fly/find",ba:"https://www.britishairways.com/travel/redeem/execclub/_gf/en_us",qatar:"https://www.qatarairways.com/en-us/Privilege-Club/redeem-avios.html",flyingblue:"https://wwws.airfrance.us/",delta:"https://www.delta.com/us/en/skymiles/use-miles/book-award-travel"};
+function flightDeepLink(p,from,to,date,pax){
+  const f=encodeURIComponent(from),t=encodeURIComponent(to),d=date||"",n=pax||1;
+  if(from&&to&&d){
+    switch(p){
+      case"united":return{url:`https://www.united.com/en/us/fsr/choose-flights?f=${f}&t=${t}&d=${d}&tt=1&at=1&px=${n}&taxng=1&newHP=True&clm=7&st=bestmatches`,filled:true};
+      case"aeroplan":return{url:`https://www.aircanada.com/aeroplan/redeem/availability/outbound?org0=${f}&dest0=${t}&departureDate0=${d}&ADT=${n}&YTH=0&CHD=0&INF=0&INS=0&lang=en-CA&tripType=O&marketCode=INT`,filled:true};
+      case"aa":return{url:`https://www.aa.com/booking/search?locale=en_US&pax=${n}&adult=${n}&type=OneWay&searchType=Award&cabin=&carriers=ALL&slices=${encodeURIComponent(JSON.stringify([{orig:from,origNearby:false,dest:to,destNearby:false,date:d}]))}`,filled:true};
+      case"atmos":return{url:`https://www.alaskaair.com/search/results?A=${n}&O=${f}&D=${t}&OD=${d}&RT=false&ShoppingMethod=onlineaward`,filled:true};
+      case"virgin":return{url:`https://www.virginatlantic.com/flight-search/select-flights?origin=${f}&destination=${t}&departing=${d}&adult=${n}&awardSearch=true`,filled:true};
+      case"jetblue":return{url:`https://www.jetblue.com/booking/flights?from=${f}&to=${t}&depart=${d}&isMultiCity=false&noOfRoute=1&adults=${n}&children=0&infants=0&sharedMarket=false&roundTripFaresFlag=false&usePoints=true`,filled:true};
+      case"southwest":return{url:`https://www.southwest.com/air/booking/select-depart.html?originationAirportCode=${f}&destinationAirportCode=${t}&departureDate=${d}&tripType=oneway&adultPassengersCount=${n}&fareType=POINTS`,filled:true};
+    }
+  }
+  return{url:AWARD_PAGE[p]||PROGS[p].u,filled:false};
+}
+const TRAVEL={c1:{n:"Capital One Travel",u:"https://travel.capitalone.com"},chase:{n:"Chase Travel",u:"https://travelsecure.chase.com"},amex:{n:"Amex Travel",u:"https://www.amextravel.com"},citi:{n:"Citi Travel",u:"https://travel.citi.com"},bilt:{n:"Bilt Travel",u:"https://www.biltrewards.com"},wf:{n:"Wells Fargo Rewards",u:"https://www.wellsfargorewards.com"},usb:{n:"U.S. Bank travel",u:"https://www.usbank.com"}};
+const XFER={c1:"https://www.capitalone.com",chase:"https://ultimaterewardspoints.chase.com",amex:"https://www.americanexpress.com",citi:"https://www.thankyou.com",bilt:"https://www.biltrewards.com",wf:"https://www.wellsfargorewards.com",usb:"https://www.usbank.com",mb:"https://www.marriott.com"};
+const ARROW_SVG='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function bookBtns(x,from,to,date,pax){
+  const L=flightDeepLink(x.o.p,from,to,date,pax),c=x.best.cid;
+  return `<div class="pr-acts"><a class="btn small" href="${L.url}" target="_blank" rel="noopener">Book on ${esc(PSHORT[x.o.p]||x.P.n)}${ARROW_SVG}</a>${XFER[c]?`<a class="btn ghost small" href="${XFER[c]}" target="_blank" rel="noopener">Transfer ${esc(CARDS.find(k=>k.id===c).name)} points</a>`:""}</div><p class="pr-link">${L.filled?"Opens with your route and date filled in. Sign in if asked.":"Opens the award search. Enter your route and date there."}</p>`;
+}
 /* options per region: p program, fly airlines, e/b/f = one-way miles [low, high], fe/fb = taxes & fees USD [low, high] (fb also used for first), n = note */
 const S=6, LM="No fuel surcharges.", AC="Includes Aeroplan's ~$30 partner booking fee.";
 const ROUTES={
@@ -1484,12 +1525,12 @@ function legRows(f,t){
   rows.sort((a,b)=>a.best.lo-b.best.lo||a.fees[0]-b.fees[0]);
   return{rows};
 }
-function presMini(x,i,mult){
+function presMini(x,i,mult,leg){
   const c=CARDS.find(cc=>cc.id===x.best.cid),via=(x.P.via&&x.P.via[x.best.cid])||"";
   return `<article class="pres${i===0?" first":""}"><div class="pr-main"><div class="pr-tags">${i===0?'<span class="pr-badge">Lowest points</span>':""}<span class="pr-all">${esc(x.P.a)}</span></div>
     <h4>${esc(x.o.fly)}</h4><p class="pr-prog">Book with <b>${esc(x.P.n)}</b></p><p class="pr-xfer">Transfer from ${esc(c.name)} at ${ratioTxt(x.best.r)}${via?` (${esc(via)})`:""}</p>${x.o.n?`<p class="pr-note">${esc(x.o.n)}</p>`:""}</div>
     <div class="pr-cost"><div class="pr-pts"><b>${rng(x.best.lo*mult,x.best.hi*mult)}</b><small>${esc(c.unit)}</small></div><div class="pr-fee">+ ${rng(x.fees[0]*mult,x.fees[1]*mult,usd)} <small>taxes &amp; fees</small></div>
-    <div class="pr-acts"><a class="btn small" href="${x.P.u}" target="_blank" rel="noopener">Check seats</a></div></div></article>`;
+    ${bookBtns(x,leg.f,leg.t,$("ps-date").value,mult)}</div></article>`;
 }
 function tripStops(from,to){
   let s=[from,to];if(pTrip==="mc")mcLegs.forEach(l=>{s.push(l.from,l.to);});
@@ -1511,7 +1552,7 @@ function renderMulti(from,to){
     if(R.err)return `<div class="leg">${head}</div><div class="ps-empty">${esc(R.err)}</div></div>`;
     if(!R.rows.length)return `<div class="leg">${head}</div><div class="ps-empty">None of your cards' partners publish prices for this flight in this cabin.</div></div>`;
     const b=R.rows[0];
-    return `<div class="leg">${head}<span class="leg-best">From ${fk(b.best.lo*pax)} ${esc(CARDS.find(c=>c.id===b.best.cid).unit)}</span></div><div class="ps-results" id="leg-${li}">${R.rows.map((x,i)=>presMini(x,i,pax)).join("")}</div></div>`;}).join("");
+    return `<div class="leg">${head}<span class="leg-best">From ${fk(b.best.lo*pax)} ${esc(CARDS.find(c=>c.id===b.best.cid).unit)}</span></div><div class="ps-results" id="leg-${li}">${R.rows.map((x,i)=>presMini(x,i,pax,{f,t})).join("")}</div></div>`;}).join("");
   legs.forEach((_,li)=>{if($("leg-"+li))clampList("leg-"+li,3,"options");});
 }
 function renderLegs(){
@@ -1576,6 +1617,8 @@ function runSearchCore(){
   sum.innerHTML=`<div><small>${esc(route)} · ${cabName} · ${pax} traveler${pax>1?"s":""} · ${pTrip==="rt"?"round trip":"one way"}</small>
     <b>${rows.length} way${rows.length>1?"s":""} to book with your points</b></div>
     <div class="ps-best"><small>Cheapest starting price</small><b>${fk(r0.best.lo*mult)} <span>${esc(c0.unit)}</span></b><span>+ about ${usd(r0.fees[0]*mult)}–${usd(r0.fees[1]*mult)} in taxes &amp; fees</span></div>`;
+  const tv=window.__ready?[...pcards].filter(id=>TRAVEL[id]&&PORTAL[id]):[];
+  if(tv.length)sum.insertAdjacentHTML("beforeend",`<div class="cashfare"><small>Prefer a regular ticket? Pay the cash fare with points:</small>${tv.map(id=>`<a class="fchip" href="${TRAVEL[id].u}" target="_blank" rel="noopener">${esc(TRAVEL[id].n)} · ${cents(PORTAL[id].h[0])} per point</a>`).join("")}</div>`);
   out.innerHTML=rows.map((x,i)=>{
     const c=CARDS.find(cc=>cc.id===x.best.cid),via=(x.P.via&&x.P.via[x.best.cid])||"";
     const others=[...pcards].filter(id=>id!==x.best.cid&&x.P.r[id]).map(id=>CARDS.find(cc=>cc.id===id).name);
@@ -1591,7 +1634,7 @@ function runSearchCore(){
         <div class="pr-pts"><b>${rng(x.best.lo*mult,x.best.hi*mult)}</b><small>${esc(c.unit)}</small></div>
         <div class="pr-fee">+ ${rng(x.fees[0]*mult,x.fees[1]*mult,usd)} <small>taxes &amp; fees</small></div>
         <div class="pr-each">${rng(x.m[0],x.m[1])} ${x.P.n.includes("Avios")?"Avios":"miles"} per person, each way</div>
-        <div class="pr-acts"><a class="btn small" href="${x.P.u}" target="_blank" rel="noopener">Check seats<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a></div>
+        ${bookBtns(x,from,to,$("ps-date").value,pax)}
       </div>
     </article>`;}).join("");
 }
@@ -1611,7 +1654,7 @@ renderCardPicker();
 ["ps-from","ps-to","ps-pax","ps-region"].forEach(id=>$(id).addEventListener("input",runSearch));
 $("ps-region").addEventListener("change",runSearch);
 document.querySelectorAll("#ps-cabin button").forEach(b=>b.onclick=()=>{pcabin=b.dataset.v;document.querySelectorAll("#ps-cabin button").forEach(x=>x.setAttribute("aria-pressed",x===b));runSearch();});
-document.querySelectorAll("#ps-trip button").forEach(b=>b.onclick=()=>{pTrip=b.dataset.v;document.querySelectorAll("#ps-trip button").forEach(x=>x.setAttribute("aria-pressed",x===b));$("mc-legs").hidden=pTrip!=="mc";if(pTrip==="mc"&&!mcLegs.length)mcLegs.push({from:$("ps-to").value.trim().toUpperCase(),to:""});renderLegs();runSearch();});
+document.querySelectorAll("#ps-trip button").forEach(b=>b.onclick=()=>{pTrip=b.dataset.v;document.querySelectorAll("#ps-trip button").forEach(x=>x.setAttribute("aria-pressed",x===b));$("mc-legs").hidden=pTrip!=="mc";$("ps-ret-wrap").hidden=pTrip!=="rt";if(pTrip==="mc"&&!mcLegs.length)mcLegs.push({from:$("ps-to").value.trim().toUpperCase(),to:""});renderLegs();runSearch();});
 $("ps-swap").onclick=()=>{const a=$("ps-from").value;$("ps-from").value=$("ps-to").value;$("ps-to").value=a;runSearch();};
 runSearch();
 
@@ -1642,7 +1685,7 @@ const CARCO={
   payless:{n:"Payless",u:"https://www.paylesscar.com"},ace:{n:"ACE Rent A Car",u:"https://www.acerentacar.com"},advantage:{n:"Advantage",u:"https://www.advantage.com"},turo:{n:"Turo (car sharing)",u:"https://turo.com"}
 };
 let stayMode="hotel";const hotelSel=new Set(),carSel=new Set();
-const hcVals={hilton:{cash:"200"},marriott:{cash:"200"},hyatt:{cash:"200"},ihg:{cash:"200"}};
+const hcVals={hilton:{cash:"200"},marriott:{cash:"200"},hyatt:{cash:"200"},ihg:{cash:"200"},wyndham:{cash:"150"},choice:{cash:"150"},accor:{cash:"200"},iprefer:{cash:"300"}};
 /* estimated award price per night from the cash rate */
 const HYATT_LEVELS=[3500,5000,6500,8000,9500,12000,15000,17000,20000,23000,25000,29000,30000,35000,40000,45000];
 function estPts(key,cashNight){
@@ -1655,6 +1698,7 @@ function estPts(key,cashNight){
     case"hyatt":{const t=c/0.018;const lv=HYATT_LEVELS.reduce((a,b)=>Math.abs(b-t)<Math.abs(a-t)?b:a);return{pts:lv,how:"Hyatt uses a fixed award chart. This is the closest standard level for a hotel at this price."};}
     case"wyndham":return{pts:c<150?7500:c<300?15000:30000,how:"Wyndham awards come in three levels: 7,500, 15,000 or 30,000 points a night."};
     case"accor":return{pts:r(c/0.022,100),how:"Accor points have a fixed value: 2,000 points take €40 off."};
+    case"iprefer":return{pts:r(c/0.005,1000),how:"I Prefer points are usually worth about half a cent each."};
     default:return null;
   }
 }
@@ -1669,9 +1713,17 @@ function hotelRows(key,cash,pts,nights){
   const H=HOTELS[key],paid=H.free5?nights-Math.floor(nights/5):nights,cashT=cash*nights,ptsT=pts*paid,rows=[];
   if(pts)rows.push({t:`Use ${H.short} points${toNum((hcVals[key]||{}).pts)?"":" (estimate)"}`,v:ptsT,u:`${H.short} pts`,c:cash?cashT/ptsT*100:0});
   if(pts)pcards.forEach(id=>{const r=H.r[id];if(!r)return;const cp=Math.ceil(ptsT/r/1000)*1000;rows.push({t:`Transfer ${cname(id).name} → ${H.short}`,v:cp,u:cname(id).unit,c:cash?cashT/cp*100:0});});
-  if(cash)pcards.forEach(id=>{const P=PORTAL[id];if(!P||!P.h)return;const lo=Math.ceil(cashT/(P.h[1]/100)),hi=Math.ceil(cashT/(P.h[0]/100));rows.push({t:`Pay cash price with ${cname(id).name} points`,v:lo,hi,u:cname(id).unit,c:P.h[1],via:P.how});});
+  if(cash)pcards.forEach(id=>{const P=PORTAL[id];if(!P||!P.h)return;const lo=Math.ceil(cashT/(P.h[1]/100)),hi=Math.ceil(cashT/(P.h[0]/100));rows.push({t:`Pay cash price with ${cname(id).name} points`,v:lo,hi,u:cname(id).unit,c:P.h[1],via:P.how,book:TRAVEL[id]&&TRAVEL[id].u,bookTxt:TRAVEL[id]&&`Book on ${TRAVEL[id].n}`});});
   rows.sort((a,b)=>a.v-b.v);
   return {rows,cashT,ptsT,paid};
+}
+function stayDates(){const ci=$("hs-in").value,n=Math.max(1,+$("hs-nights").value||1);if(!ci)return{ci:"",co:""};const t=new Date(ci+"T12:00:00");t.setDate(t.getDate()+n);return{ci,co:t.toISOString().slice(0,10)};}
+function brandSearch(k,q){
+  const {ci,co}=stayDates(),e=encodeURIComponent(q||""),mdy=d=>d?`${d.slice(5,7)}/${d.slice(8,10)}/${d.slice(0,4)}`:"";
+  if(q&&k==="hilton")return `https://www.hilton.com/en/search/?query=${e}${ci?`&arrivalDate=${ci}&departureDate=${co}`:""}&numRooms=1&numAdults=2&redeemPts=true`;
+  if(q&&k==="marriott")return `https://www.marriott.com/search/default.mi?destinationAddress.destination=${e}${ci?`&fromDate=${mdy(ci)}&toDate=${mdy(co)}`:""}&useRewardsPoints=true`;
+  if(q&&k==="hyatt")return `https://www.hyatt.com/search/hotels/en-US/${e}${ci?`?checkinDate=${ci}&checkoutDate=${co}&rooms=1&adults=2&kids=0&rateFilter=woh`:""}`;
+  return `https://www.google.com/travel/search?q=${encodeURIComponent(`${HOTELS[k]?HOTELS[k].short+" hotels":"hotels"}${q?" in "+q:""}`)}`;
 }
 function renderHotelOut(key){
   const el=$("hco-"+key);if(!el)return;
@@ -1680,8 +1732,9 @@ function renderHotelOut(key){
   const pin=document.querySelector(`.ch-in input[data-k="${key}"][data-f="pts"]`);if(pin)pin.placeholder=est?`About ${est.pts.toLocaleString()}`:"0";
   if(!cash&&!pts){el.innerHTML=`<p class="hint">Enter the nightly cash price for a hotel you like. We'll estimate the points price and show the cheapest way to pay.</p>`;return;}
   const H=HOTELS[key],{rows,cashT,ptsT,paid}=hotelRows(key,cash,pts,nights);
+  const city0=$("hs-city").value.trim();rows.forEach(r=>{if(!r.book){r.book=brandSearch(key,city0);r.bookTxt=`Book on ${H.u.replace(/^https:\/\/(www\.)?/,"")}`;}});
   const val=typed&&cash?cashT/ptsT*100:null;
-  el.innerHTML=`${v.auto?`<p class="hint">Cash price is the typical ${esc(H.short)} rate we found for your dates. Change it if you have a specific hotel in mind.</p>`:""}${est?`<p class="est"><b>About ${est.pts.toLocaleString()} ${esc(H.short)} points a night</b> (estimate). ${esc(est.how)} Type the real points price if you see one.</p>`:""}<ol class="mini">${rows.map((r,i)=>`<li class="${i===0?"best":""}"><span>${esc(r.t)}${r.via?`<small>${esc(r.via)}</small>`:""}</span><b>${r.hi&&r.hi!==r.v?`${fk(r.v)}–${fk(r.hi)}`:fk(r.v)} <small>${esc(r.u)}</small></b></li>`).join("")}</ol>
+  el.innerHTML=`${v.auto?`<p class="hint">Cash price is the typical ${esc(H.short)} rate we found for your dates. Change it if you have a specific hotel in mind.</p>`:""}${est?`<p class="est"><b>About ${est.pts.toLocaleString()} ${esc(H.short)} points a night</b> (estimate). ${esc(est.how)} Type the real points price if you see one.</p>`:""}<ol class="mini">${rows.map((r,i)=>`<li class="${i===0?"best":""}"><span>${esc(r.t)}${r.via?`<small>${esc(r.via)}</small>`:""}${r.book?`<a href="${r.book}" target="_blank" rel="noopener">${esc(r.bookTxt)} →</a>`:""}</span><b>${r.hi&&r.hi!==r.v?`${fk(r.v)}–${fk(r.hi)}`:fk(r.v)} <small>${esc(r.u)}</small></b></li>`).join("")}</ol>
    ${val&&H.val?`<p class="hint">${esc(H.short)} points are worth <b>${cents(val)}</b> each here, vs. about ${cents(H.val)} usually. ${val>=H.val?"A good use of hotel points.":"Paying with card points or cash is likely better."}</p>`:""}
    ${paid<nights?`<p class="hint">Includes the free 5th night on award stays.</p>`:""}`;
 }
@@ -1701,12 +1754,12 @@ function renderHotels(){
     const mine=[...pcards].filter(id=>H.r[id]).map(id=>`${cname(id).name} ${hratio(H.r[id])}`);
     const others=CARDS.filter(c=>!pcards.has(c.id)&&H.r[c.id]).map(c=>`${c.name} ${hratio(H.r[c.id])}`);
     const st=statusFor(k);const note=[...pcards].map(id=>H.note&&H.note[id]).filter(Boolean)[0];
-    const g=`https://www.google.com/travel/search?q=${encodeURIComponent(`${H.short} hotels${city?" in "+city:""}`)}`;
+    const g=brandSearch(k,city);
     const v=hcVals[k]||{};
     return `<article class="chain"><div class="ch-head"><div><h4>${esc(H.short)}</h4><small>${esc(H.n)}${H.val?` · points usually worth about ${cents(H.val)}`:""}</small></div>
       <div class="ch-links"><a class="btn small" href="${g}" target="_blank" rel="noopener">${city?`Find ${esc(H.short)} hotels in ${esc(city)}`:`Find ${esc(H.short)} hotels`}</a><button type="button" class="btn ghost small" data-hmapbrand="${k}">Map</button><a class="btn ghost small" href="${H.u}" target="_blank" rel="noopener">${esc(H.u.replace(/^https:\/\/(www\.)?/,""))}</a></div></div>
       <div class="ch-facts"><div><small>Transfer from your cards</small><b>${mine.length?esc(mine.join(" · ")):"None of your cards"}</b>${others.length?`<span>Also from ${esc(others.join(", "))}</span>`:""}${note?`<span>${esc(note)}</span>`:""}</div>
-      <div><small>Your status here</small><b>${st.length?st.map(s=>`${esc(s.t)} <span class="via">with ${esc(s.p.name)}</span>`).join("<br>"):"—"}</b></div></div>
+      <div><small>Your status here</small><b>${st.length?st.map(s=>`${esc(s.t)} <span class="via">with ${esc(s.p.name)}</span>`).join("<br>"):`<span class="via">No status from your cards</span>`}</b></div></div>
       <details class="ch-calc"${v.cash||v.pts?" open":""}><summary>Cash vs. points for a hotel</summary>
         <div class="ch-in"><label>Cash per night<input inputmode="decimal" data-k="${k}" data-f="cash" value="${esc(v.cash||"")}" placeholder="$"></label><label>Points per night (optional)<input inputmode="numeric" data-k="${k}" data-f="pts" value="${esc(v.pts||"")}" placeholder="0"></label></div>
         <div id="hco-${k}"></div></details></article>`;}).join("")||`<div class="ps-empty">Independent hotels show on the map. Tap “Map of every hotel.”</div>`;
@@ -1716,7 +1769,7 @@ function renderHotels(){
   renderSide($("h-side"),"hotel",[]);$("h-title").textContent=city?`Hotels in ${city}`:"Hotels";
 }
 function renderCars(){
-  const ap=$("cs-ap").value.trim().toUpperCase(),cash=toNum($("cs-cash").value),days=Math.max(1,+$("cs-days").value||1),keys=Object.keys(CARCO);
+  const ap=$("cs-ap").value.trim().toUpperCase(),days=Math.max(1,+$("cs-days").value||1),typedCash=toNum($("cs-cash").value),cash=typedCash||days*65,keys=Object.keys(CARCO);
   chips($("c-filter"),keys,Object.fromEntries(keys.map(k=>[k,CARCO[k].n])),carSel,()=>{renderCars();updateJump();clampList("c-results",4,"companies");},"All companies");
   const show=keys.filter(k=>!carSel.size||carSel.has(k));
   {const pd=$("cs-date").value,dd=pd?(()=>{const t=new Date(pd+"T12:00:00");t.setDate(t.getDate()+days);return t.toISOString().slice(0,10);})():"";
@@ -1726,16 +1779,17 @@ function renderCars(){
      <div class="hmap-body"><small>Every company, live prices</small><b>${ap?`Compare every rental company at ${esc(ap)}`:"Compare every rental company"}</b><p>Opens a live search across all rental companies${pd?` for ${esc(fmtDate(pd,true))} – ${esc(fmtDate(dd,true))}`:""}. Then come back to see how many points the cheapest one costs with your cards.</p>
      <div class="hmap-acts"><a class="btn small" href="${kay}" target="_blank" rel="noopener">Compare all on Kayak</a><a class="fchip" href="${goo}" target="_blank" rel="noopener">Search Google</a></div></div></div>`;}
   const pay=[...pcards].map(id=>{const P=PORTAL[id];if(!P||!P.c)return{id,na:true};return{id,lo:Math.ceil(cash/(P.c[1]/100)),hi:Math.ceil(cash/(P.c[0]/100)),how:P.how};});
-  $("c-summary").innerHTML=`<div><small>${ap?"Pick up at "+esc(ap)+" · ":""}${days} day${days>1?"s":""}${cash?` · $${Math.round(cash).toLocaleString()} total`:""}</small><b>${show.length} rental compan${show.length>1?"ies":"y"} to compare</b></div>`;
+  $("c-summary").innerHTML=`<div><small>${ap?"Pick up at "+esc(ap)+" · ":""}${days} day${days>1?"s":""}${` · $${Math.round(cash).toLocaleString()} total${typedCash?"":" (estimate)"}`}</small><b>${show.length} rental compan${show.length>1?"ies":"y"} to compare</b></div>`;
   $("c-results").innerHTML=show.map(k=>{const C=CARCO[k],st=statusFor(k);
     const g=`https://www.google.com/search?q=${encodeURIComponent(`${C.n} car rental ${ap?ap+" airport":""}`.trim())}`;
     return `<article class="chain"><div class="ch-head"><div><h4>${esc(C.n)}</h4><small>${ap?`At ${esc(ap)} airport`:"Enter your pickup airport above"}</small></div>
       <div class="ch-links"><a class="btn small" href="${g}" target="_blank" rel="noopener">${ap?`Find ${esc(C.n)} at ${esc(ap)}`:`Find ${esc(C.n)}`}</a><a class="btn ghost small" href="${C.u}" target="_blank" rel="noopener">${esc(C.u.replace(/^https:\/\/(www\.)?/,""))}</a></div></div>
-      <div class="ch-facts"><div><small>Your status here</small><b>${st.length?st.map(s=>`${esc(s.t)} <span class="via">with ${esc(s.p.name)}</span>`).join("<br>"):"—"}</b></div>
-      <div><small>Pay with points</small><b>${cash?pay.map(x=>x.na?`<span class="via">${esc(cname(x.id).name)}: not on its travel site</span>`:`${x.lo===x.hi?fk(x.lo):fk(x.lo)+"–"+fk(x.hi)} ${esc(cname(x.id).unit)}`).join("<br>"):`<span class="via">Enter the total price above</span>`}</b></div></div></article>`;}).join("")||`<div class="ps-empty">Pick at least one company.</div>`;
+      <div class="ch-facts"><div><small>Your status here</small><b>${st.length?st.map(s=>`${esc(s.t)} <span class="via">with ${esc(s.p.name)}</span>`).join("<br>"):`<span class="via">No status from your cards</span>`}</b></div>
+      <div><small>Pay with points</small><b>${cash?pay.map(x=>x.na?`<span class="via">${esc(cname(x.id).name)}: not on its travel site</span>`:`${x.lo===x.hi?fk(x.lo):fk(x.lo)+"–"+fk(x.hi)} ${esc(cname(x.id).unit)}${TRAVEL[x.id]?` <a class="via" href="${TRAVEL[x.id].u}" target="_blank" rel="noopener">Book on ${esc(TRAVEL[x.id].n)} →</a>`:""}`).join("<br>")+(typedCash?"":`<br><span class="via">Based on about $65 a day. Enter the real price for exact points.</span>`):""}</b></div></div></article>`;}).join("")||`<div class="ps-empty">Pick at least one company.</div>`;
   renderSide($("c-side"),"car",[ap]);$("c-title").textContent=ap?`Rental cars at ${ap}`:"Rental cars";
 }
-["hs-city","hs-nights"].forEach(id=>$(id).addEventListener("input",()=>{renderHotels();updateJump();clampList("h-results",3,"hotel brands");}));
+{const t=new Date();t.setDate(t.getDate()+30);if(!$("hs-in").value)$("hs-in").value=t.toISOString().slice(0,10);}
+["hs-city","hs-nights","hs-in"].forEach(id=>$(id).addEventListener("input",()=>{renderHotels();updateJump();clampList("h-results",3,"hotel brands");}));
 {const t=new Date();t.setDate(t.getDate()+30);$("cs-date").value=t.toISOString().slice(0,10);}
 ["cs-ap","cs-cash","cs-days","cs-date"].forEach(id=>$(id).addEventListener("input",()=>{renderCars();updateJump();clampList("c-results",4,"companies");}));
 $("showPlan").onclick=()=>{$("plan").hidden=false;$("plan").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});};
@@ -1807,7 +1861,7 @@ function popupHTML(h,nights){
   const est=per?estPts(b,per):null,H=HOTELS[b];
   const xfer=est&&H?[...pcards].filter(id=>H.r[id]).map(id=>`<li>Transfer about ${fk(Math.ceil(est.pts*nights/H.r[id]/1000)*1000)} ${esc(cname(id).unit)} to ${esc(H.short)}</li>`).join(""):"";
   const pays=total?[...pcards].map(id=>{const P=PORTAL[id];if(!P||!P.h)return"";const lo=Math.ceil(total/(P.h[1]/100)),hi=Math.ceil(total/(P.h[0]/100));return `<li>${esc(cname(id).name)}: ${lo===hi?fk(lo):fk(lo)+"–"+fk(hi)} points</li>`;}).join(""):"";
-  return `<div class="pop"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.address?` · ${esc(h.address)}`:""}</small>${per?`<p>$${Math.round(per).toLocaleString()} per night · $${Math.round(total).toLocaleString()} total</p>`:`<p class="hint">No price for these dates yet</p>`}${est?`<p class="est" style="margin:6px 0"><b>About ${fk(est.pts)} ${esc(brandName(b))} points a night</b> (estimate)</p>`:""}${pays||xfer?`<ul>${pays}${xfer}</ul>`:""}${HOTELS[b]?`<button type="button" class="btn small" data-compare="${b}" data-per="${per?Math.round(per):""}">Compare with ${esc(brandName(b))} points</button>`:""}</div>`;
+  return `<div class="pop"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.address?` · ${esc(h.address)}`:""}</small>${per?`<p>$${Math.round(per).toLocaleString()} per night · $${Math.round(total).toLocaleString()} total</p>`:`<p class="hint">No price for these dates yet</p>`}${est?`<p class="est" style="margin:6px 0"><b>About ${fk(est.pts)} ${esc(brandName(b))} points a night</b> (estimate)</p>`:""}${pays||xfer?`<ul>${pays}${xfer}</ul>`:""}<div class="pop-acts"><a class="btn small" href="${HOTELS[b]&&["hilton","marriott","hyatt"].includes(b)?brandSearch(b,h.name):`https://www.google.com/travel/search?q=${encodeURIComponent(h.name+" "+$("hs-city").value.trim())}`}" target="_blank" rel="noopener">Book this hotel</a>${HOTELS[b]?`<button type="button" class="btn ghost small" data-compare="${b}" data-per="${per?Math.round(per):""}">Compare ways to pay</button>`:""}</div></div>`;
 }
 function filteredHotels(){return hdata.hotels.filter(h=>!hotelSel.size||hotelSel.has(hb(h)));}
 function renderMvList(){
@@ -1974,6 +2028,8 @@ $("goSearch").onclick=()=>{runSearch();setMode("flights",true);};
 ["ps-from","ps-to","ps-pax"].forEach(id=>$(id).addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("goSearch").click();}}));
 [["LHR","London"],["HND","Tokyo"],["CDG","Paris"],["CUN","Cancún"],["HNL","Honolulu"],["SYD","Sydney"],["DXB","Dubai"]].forEach(([c,n])=>{const b=document.createElement("button");b.type="button";b.textContent=n;b.onclick=()=>{if(mode==="hotels"){$("hx-city").value=n;$("hx-city").dispatchEvent(new Event("input"));setMode("hotels",true);}else if(mode==="cars"){$("hx-ap").value=c;$("hx-ap").dispatchEvent(new Event("input"));setMode("cars",true);}else{$("ps-to").value=c;$("ps-region").value="";runSearch();setMode("flights",true);}};$("popular").appendChild(b);});
 
+{const t=new Date();t.setDate(t.getDate()+45);$("ps-date").value=t.toISOString().slice(0,10);t.setDate(t.getDate()+7);$("ps-ret").value=t.toISOString().slice(0,10);}
+["ps-date","ps-ret"].forEach(id=>$(id).addEventListener("change",runSearch));
 /* ---------- views ---------- */
 function show(view){
   for(const v of ["client","dash","settings"])$("view-"+v).hidden=v!==view;
