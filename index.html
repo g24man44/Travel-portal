@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Search every airline, hotel and rental car your credit card points can book.">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
 <style>html{color-scheme:light}body{margin:0;font-size:14px}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -493,9 +494,13 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
 .mv-map{border-radius:18px;overflow:hidden;border:1px solid var(--line);position:relative;background:var(--bg);min-height:300px}
 .mv-fallback{background:linear-gradient(115deg,transparent 46%,color-mix(in srgb,var(--gold) 30%,transparent) 46.5%,color-mix(in srgb,var(--gold) 30%,transparent) 47.5%,transparent 48%),linear-gradient(20deg,transparent 60%,var(--line) 60.5%,var(--line) 61.5%,transparent 62%),repeating-linear-gradient(0deg,transparent 0 34px,var(--line) 34px 35px),repeating-linear-gradient(90deg,transparent 0 34px,var(--line) 34px 35px),var(--bg)}
 .mk{display:inline-block;transform:translate(-50%,-50%);background:var(--paper);color:var(--ink);border:1.5px solid var(--ink);border-radius:999px;padding:5px 10px;font:700 12.5px/1 var(--f-body);white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.2);cursor:pointer}
+.mk.dot{width:14px;height:14px;padding:0;background:var(--gold);border:2px solid var(--paper)}
 .mv-fallback .mk{position:absolute}
 .mk:hover,.mk.hot,.hot .mk{background:var(--ink);color:var(--paper);z-index:5}
 .mk.demo{border-style:dashed}
+.marker-cluster{background:color-mix(in srgb,var(--gold) 35%,transparent);border-radius:50%}
+.marker-cluster div{width:32px;height:32px;margin:4px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font:700 12.5px/1 var(--f-body)}
+.marker-cluster span{line-height:32px}
 .mv-pop{position:absolute;left:12px;bottom:12px;right:12px;max-width:320px;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 40px 14px 14px;box-shadow:var(--shadow);z-index:10}
 .mv-x{position:absolute;top:8px;right:8px;height:30px;width:30px}
 .pop b{display:block;font-size:15px}
@@ -755,7 +760,7 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
           <label for="hs-in">Check-in<input id="hs-in" type="date"></label>
           <label for="hs-nights" class="ps-pax">Nights<input id="hs-nights" type="number" min="1" max="30" value="3"></label>
         </div>
-        <div class="viewbar"><div class="tog" id="h-view"><button type="button" data-v="brands" aria-pressed="true">Compare brands</button><button type="button" data-v="map" aria-pressed="false">Map of hotels</button></div></div>
+        <div class="viewbar"><div class="tog" id="h-view"><button type="button" data-v="brands" aria-pressed="true">Compare brands</button><button type="button" data-v="map" aria-pressed="false">Map of every hotel</button></div></div>
         <div id="h-mapview" hidden><div class="mv-note" id="mv-note"></div><div class="mv"><div class="mv-list" id="mv-list"></div><div class="mv-map" id="mv-map"></div></div></div>
         <div class="tool-grid" id="h-brands"><div class="ps-out">
           <div class="ps-summary" id="h-summary"></div>
@@ -770,11 +775,13 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
         <div class="rsec-h"><span class="rsec-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M5 16h14M4 16v-3l2-5h12l2 5v3M4 16v2h3v-2m10 0v2h3v-2M7.5 13h.01M16.5 13h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><small>Getting around</small><h3 id="c-title">Rental cars</h3></div></div>
         <div class="tool-row">
           <label for="cs-ap" class="grow">Pickup airport<input id="cs-ap" class="code" list="airports" maxlength="4" autocomplete="off"></label>
+          <label for="cs-date">Pickup date<input id="cs-date" type="date"></label>
           <label for="cs-days" class="ps-pax">Days<input id="cs-days" type="number" min="1" max="60" value="3"></label>
           <label for="cs-cash">Total price (optional)<input id="cs-cash" inputmode="decimal" placeholder="$"></label>
         </div>
         <div class="tool-grid"><div class="ps-out">
           <div class="ps-summary" id="c-summary"></div>
+          <div id="c-compare"></div>
           <div class="filter-row" id="c-filter"></div>
           <div class="ps-results" id="c-results"></div>
           <p class="ps-fine">Rental companies don't take card points directly. You pay through your card's travel site or cover the charge afterward. Pay with a card that has primary coverage to skip the counter insurance.</p>
@@ -986,6 +993,7 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
 
 <script src="config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/js/jsvectormap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsvectormap@1.5.3/dist/maps/world.js"></script>
 <script>
@@ -1611,7 +1619,9 @@ const PORTAL={
 };
 const CARCO={
   hertz:{n:"Hertz",u:"https://www.hertz.com"},avis:{n:"Avis",u:"https://www.avis.com"},national:{n:"National",u:"https://www.nationalcar.com"},
-  enterprise:{n:"Enterprise",u:"https://www.enterprise.com"},alamo:{n:"Alamo",u:"https://www.alamo.com"},budget:{n:"Budget",u:"https://www.budget.com"},sixt:{n:"Sixt",u:"https://www.sixt.com"}
+  enterprise:{n:"Enterprise",u:"https://www.enterprise.com"},alamo:{n:"Alamo",u:"https://www.alamo.com"},budget:{n:"Budget",u:"https://www.budget.com"},sixt:{n:"Sixt",u:"https://www.sixt.com"},
+  thrifty:{n:"Thrifty",u:"https://www.thrifty.com"},dollar:{n:"Dollar",u:"https://www.dollar.com"},europcar:{n:"Europcar",u:"https://www.europcar.com"},fox:{n:"Fox Rent A Car",u:"https://www.foxrentacar.com"},
+  payless:{n:"Payless",u:"https://www.paylesscar.com"},ace:{n:"ACE Rent A Car",u:"https://www.acerentacar.com"},advantage:{n:"Advantage",u:"https://www.advantage.com"},turo:{n:"Turo (car sharing)",u:"https://turo.com"}
 };
 let stayMode="hotel";const hotelSel=new Set(),carSel=new Set();
 const hcVals={hilton:{cash:"100",pts:"15000"}};
@@ -1642,12 +1652,12 @@ function renderHotelOut(key){
 }
 function renderHotels(){
   const city=$("hs-city").value.trim(),keys=Object.keys(HOTELS);
-  chips($("h-filter"),keys,Object.fromEntries(keys.map(k=>[k,HOTELS[k].short])),hotelSel,()=>{renderHotels();updateJump();clampList("h-results",3,"hotel brands");},"All brands");
+  chips($("h-filter"),[...keys,"other"],Object.assign(Object.fromEntries(keys.map(k=>[k,HOTELS[k].short])),{other:"Independent & other"}),hotelSel,()=>{renderHotels();updateJump();clampList("h-results",3,"hotel brands");},"All brands");
   const show=keys.filter(k=>!hotelSel.size||hotelSel.has(k));
   const gmap=q=>`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
   $("h-map").innerHTML=city?`<div class="hmap"><div class="hmap-art" aria-hidden="true"><span class="pin p1"></span><span class="pin p2"></span><span class="pin p3"></span><span class="pin p4"></span><span class="pin p5"></span></div>
-    <div class="hmap-body"><small>Map view</small><b>See every hotel in ${esc(city)} on a map</b><p>See real hotels and nightly prices pinned across the area, then compare the best way to pay with your cards.</p>
-    <div class="hmap-acts"><button type="button" class="btn small" data-hview="map">Show hotels on the map</button><a class="fchip" href="${gmap("hotels in "+city)}" target="_blank" rel="noopener">Open in Google Maps</a></div></div></div>`:"";
+    <div class="hmap-body"><small>Map view</small><b>See every hotel in ${esc(city)} on a map</b><p>See every hotel in the area with nightly prices, including independent hotels, then compare the best way to pay with your cards.</p>
+    <div class="hmap-acts"><button type="button" class="btn small" data-hview="map">Show every hotel on the map</button></div></div></div>`:"";
   $("h-map").querySelectorAll("[data-hview]").forEach(b=>b.onclick=()=>setHView("map"));
   if(hview==="map")renderMapView();
   $("h-summary").innerHTML=`<div><small>${city?esc(city)+" · ":""}${$("hs-nights").value||1} night${(+$("hs-nights").value||1)>1?"s":""}</small><b>${show.length} hotel brand${show.length>1?"s":""} to compare</b></div>`;
@@ -1658,20 +1668,27 @@ function renderHotels(){
     const g=`https://www.google.com/travel/search?q=${encodeURIComponent(`${H.short} hotels${city?" in "+city:""}`)}`;
     const v=hcVals[k]||{};
     return `<article class="chain"><div class="ch-head"><div><h4>${esc(H.short)}</h4><small>${esc(H.n)}${H.val?` · points usually worth about ${cents(H.val)}`:""}</small></div>
-      <div class="ch-links"><a class="btn small" href="${g}" target="_blank" rel="noopener">${city?`Find ${esc(H.short)} hotels in ${esc(city)}`:`Find ${esc(H.short)} hotels`}</a>${city?`<a class="btn ghost small" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(H.short+" hotels in "+city)}" target="_blank" rel="noopener">Map</a>`:""}<a class="btn ghost small" href="${H.u}" target="_blank" rel="noopener">${esc(H.u.replace(/^https:\/\/(www\.)?/,""))}</a></div></div>
+      <div class="ch-links"><a class="btn small" href="${g}" target="_blank" rel="noopener">${city?`Find ${esc(H.short)} hotels in ${esc(city)}`:`Find ${esc(H.short)} hotels`}</a><button type="button" class="btn ghost small" data-hmapbrand="${k}">Map</button><a class="btn ghost small" href="${H.u}" target="_blank" rel="noopener">${esc(H.u.replace(/^https:\/\/(www\.)?/,""))}</a></div></div>
       <div class="ch-facts"><div><small>Transfer from your cards</small><b>${mine.length?esc(mine.join(" · ")):"None of your cards"}</b>${others.length?`<span>Also from ${esc(others.join(", "))}</span>`:""}${note?`<span>${esc(note)}</span>`:""}</div>
       <div><small>Your status here</small><b>${st.length?st.map(s=>`${esc(s.t)} <span class="via">with ${esc(s.p.name)}</span>`).join("<br>"):"—"}</b></div></div>
       <details class="ch-calc"${v.cash||v.pts?" open":""}><summary>Compare cash vs. points for a hotel</summary>
         <div class="ch-in"><label>Cash per night<input inputmode="decimal" data-k="${k}" data-f="cash" value="${esc(v.cash||"")}" placeholder="$"></label><label>Points per night<input inputmode="numeric" data-k="${k}" data-f="pts" value="${esc(v.pts||"")}" placeholder="0"></label></div>
-        <div id="hco-${k}"></div></details></article>`;}).join("")||`<div class="ps-empty">Pick at least one brand.</div>`;
+        <div id="hco-${k}"></div></details></article>`;}).join("")||`<div class="ps-empty">Independent hotels show on the map. Tap “Map of every hotel.”</div>`;
   $("h-results").querySelectorAll(".ch-in input").forEach(inp=>inp.addEventListener("input",()=>{const k=inp.dataset.k;hcVals[k]=hcVals[k]||{};hcVals[k][inp.dataset.f]=inp.value;renderHotelOut(k);}));
   show.forEach(renderHotelOut);
+  $("h-results").querySelectorAll("[data-hmapbrand]").forEach(b=>b.onclick=()=>{hotelSel.clear();hotelSel.add(b.dataset.hmapbrand);setHView("map");renderHotels();$("sec-hotels").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});});
   renderSide($("h-side"),"hotel",[]);$("h-title").textContent=city?`Hotels in ${city}`:"Hotels";
 }
 function renderCars(){
   const ap=$("cs-ap").value.trim().toUpperCase(),cash=toNum($("cs-cash").value),days=Math.max(1,+$("cs-days").value||1),keys=Object.keys(CARCO);
   chips($("c-filter"),keys,Object.fromEntries(keys.map(k=>[k,CARCO[k].n])),carSel,()=>{renderCars();updateJump();clampList("c-results",4,"companies");},"All companies");
   const show=keys.filter(k=>!carSel.size||carSel.has(k));
+  {const pd=$("cs-date").value,dd=pd?(()=>{const t=new Date(pd+"T12:00:00");t.setDate(t.getDate()+days);return t.toISOString().slice(0,10);})():"";
+   const kay=ap?`https://www.kayak.com/cars/${encodeURIComponent(ap)}${pd?`/${pd}/${dd}`:""}`:"https://www.kayak.com/cars";
+   const goo=`https://www.google.com/search?q=${encodeURIComponent(`car rental ${ap?ap+" airport":""}`.trim())}`;
+   $("c-compare").innerHTML=`<div class="hmap"><div class="hmap-art" aria-hidden="true"><span class="pin p1"></span><span class="pin p2"></span><span class="pin p3"></span><span class="pin p4"></span><span class="pin p5"></span></div>
+     <div class="hmap-body"><small>Every company, live prices</small><b>${ap?`Compare every rental company at ${esc(ap)}`:"Compare every rental company"}</b><p>Opens a live search across all rental companies${pd?` for ${esc(fmtDate(pd,true))} – ${esc(fmtDate(dd,true))}`:""}. Then come back to see how many points the cheapest one costs with your cards.</p>
+     <div class="hmap-acts"><a class="btn small" href="${kay}" target="_blank" rel="noopener">Compare all on Kayak</a><a class="fchip" href="${goo}" target="_blank" rel="noopener">Search Google</a></div></div></div>`;}
   const pay=[...pcards].map(id=>{const P=PORTAL[id];if(!P||!P.c)return{id,na:true};return{id,lo:Math.ceil(cash/(P.c[1]/100)),hi:Math.ceil(cash/(P.c[0]/100)),how:P.how};});
   $("c-summary").innerHTML=`<div><small>${ap?"Pick up at "+esc(ap)+" · ":""}${days} day${days>1?"s":""}${cash?` · $${Math.round(cash).toLocaleString()} total`:""}</small><b>${show.length} rental compan${show.length>1?"ies":"y"} to compare</b></div>`;
   $("c-results").innerHTML=show.map(k=>{const C=CARCO[k],st=statusFor(k);
@@ -1683,10 +1700,11 @@ function renderCars(){
   renderSide($("c-side"),"car",[ap]);$("c-title").textContent=ap?`Rental cars at ${ap}`:"Rental cars";
 }
 ["hs-city","hs-nights"].forEach(id=>$(id).addEventListener("input",()=>{renderHotels();updateJump();clampList("h-results",3,"hotel brands");}));
-["cs-ap","cs-cash","cs-days"].forEach(id=>$(id).addEventListener("input",()=>{renderCars();updateJump();clampList("c-results",4,"companies");}));
+{const t=new Date();t.setDate(t.getDate()+30);$("cs-date").value=t.toISOString().slice(0,10);}
+["cs-ap","cs-cash","cs-days","cs-date"].forEach(id=>$(id).addEventListener("input",()=>{renderCars();updateJump();clampList("c-results",4,"companies");}));
 $("showPlan").onclick=()=>{$("plan").hidden=false;$("plan").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});};
 /* ---------- hotel map view (standalone site) ---------- */
-const CFG=Object.assign({hotelsApi:"/api/hotels",tiles:{url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png",attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:19}},window.ATD_CONFIG||{});
+const CFG=Object.assign({hotelsApi:"/api/hotels",ratesApi:"/api/rates",tiles:{url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png",attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',maxZoom:19}},window.ATD_CONFIG||{});
 const CC={London:"GB",Paris:"FR",Rome:"IT",Barcelona:"ES",Lisbon:"PT",Athens:"GR",Amsterdam:"NL",Dublin:"IE",Zurich:"CH",Istanbul:"TR","Reykjavík":"IS",Cologne:"DE",Dubai:"AE",Doha:"QA",Maldives:"MV",Delhi:"IN",Tokyo:"JP",Seoul:"KR","Hong Kong":"HK",Singapore:"SG",Bangkok:"TH",Bali:"ID",Hanoi:"VN",Beijing:"CN",Sydney:"AU",Melbourne:"AU",Auckland:"NZ","Cape Town":"ZA",Nairobi:"KE",Cairo:"EG","São Paulo":"BR","Buenos Aires":"AR",Lima:"PE","Bogotá":"CO","Cancún":"MX","Los Cabos":"MX","Costa Rica":"CR","Punta Cana":"DO",Vancouver:"CA",Toronto:"CA",Montreal:"CA","Mexico City":"MX",Madrid:"ES",Frankfurt:"DE",Munich:"DE",Milan:"IT",Venice:"IT",Nice:"FR",Edinburgh:"GB",Copenhagen:"DK",Prague:"CZ",Vienna:"AT",Budapest:"HU","Abu Dhabi":"AE",Mumbai:"IN",Shanghai:"CN",Taipei:"TW",Osaka:"JP",Manila:"PH",Phuket:"TH",Brisbane:"AU","San Juan":"PR",Nassau:"BS",Aruba:"AW","Rio de Janeiro":"BR",Santiago:"CL",Johannesburg:"ZA","Puerto Vallarta":"MX","Montego Bay":"JM",Queenstown:"NZ",Fiji:"FJ",Tahiti:"PF",Mauritius:"MU"};
 const BRANDKW={hilton:["hilton","doubletree","hampton","embassy suites","conrad","waldorf","canopy","curio","tapestry","homewood","home2","tru by","motto","lxr","signia","spark by"],
  marriott:["marriott","courtyard","sheraton","westin","w hotel","ritz-carlton","ritz carlton","st. regis","st regis","jw ","méridien","meridien","renaissance","autograph","tribute","aloft","moxy","element","fairfield","residence inn","springhill","towneplace","four points","ac hotel","delta hotels","luxury collection","edition","gaylord"],
@@ -1696,93 +1714,123 @@ const BRANDKW={hilton:["hilton","doubletree","hampton","embassy suites","conrad"
  choice:["comfort inn","comfort suites","quality inn","sleep inn","clarion","cambria","econo lodge","rodeway","mainstay","ascend","radisson","country inn"],
  accor:["sofitel","novotel","ibis","mercure","pullman","fairmont","raffles","swissotel","swissôtel","mgallery","mövenpick","movenpick","adagio","mama shelter","25hours","rixos"],iprefer:[]};
 function brandOf(name){const n=" "+(name||"").toLowerCase()+" ";for(const k in BRANDKW)if(BRANDKW[k].some(w=>n.includes(w)))return k;return"other";}
+function hb(h){return h.brand||brandOf(h.name);}
 function brandName(k){return HOTELS[k]?HOTELS[k].short:"Independent";}
 function cityParts(city){const m=city.match(/^(.*?),\s*([A-Za-z]{2})$/);const name=(m?m[1]:city).trim();return{name,country:(m?m[2]:(CC[name]||"US")).toUpperCase()};}
 function cityCenter(name){const p=PINS.find(x=>x.n.toLowerCase()===name.toLowerCase());return p?{lat:p.lat,lng:p.lon}:null;}
 function addDays(d,n){const t=new Date(d+"T12:00:00");t.setDate(t.getDate()+n);return t.toISOString().slice(0,10);}
-let hview="brands",hdata={key:"",hotels:[],source:""},hmapObj=null,hlayer=null,hmarkers={},hTimer=null;
+let hview="brands",hdata={key:"",hotels:[],source:""},hmapObj=null,hlayer=null,hmarkers={},hTimer=null,pTimer=null;
+const priceCache={};
 (function initCheckin(){const t=new Date();t.setDate(t.getDate()+30);$("hs-in").value=t.toISOString().slice(0,10);})();
+function stayKey(){const n=Math.max(1,+$("hs-nights").value||1),ci=$("hs-in").value;return `${ci}|${n}`;}
+function priceOf(h){if(h.demo)return h.price;const v=priceCache[stayKey()+"|"+h.id];return typeof v==="number"?v:null;}
 function demoHotels(city){
   const c=cityCenter(cityParts(city).name)||{lat:40.754,lng:-73.984},bs=["hilton","marriott","hyatt","ihg","accor","wyndham","choice","other","marriott","hilton"];
-  return bs.map((b,i)=>({id:"demo"+i,name:`Example ${b==="other"?"boutique":brandName(b)} hotel ${i+1}`,lat:c.lat+Math.sin(i*2.3)*0.022,lng:c.lng+Math.cos(i*1.7)*0.032,stars:3+(i%3),address:"Example address",photo:"",brand:b,price:(150+((i*53)%260))*(+$("hs-nights").value||1),demo:true}));
+  return bs.map((b,i)=>({id:"demo"+i,brand:b,name:`Example ${b==="other"?"boutique":brandName(b)} hotel ${i+1}`,lat:c.lat+Math.sin(i*2.3)*0.022,lng:c.lng+Math.cos(i*1.7)*0.032,stars:3+(i%3),address:"Example address",photo:"",price:(150+((i*53)%260))*(+$("hs-nights").value||1),demo:true}));
 }
 async function loadHotels(){
   const city=$("hs-city").value.trim();if(!city){hdata={key:"",hotels:[],source:""};renderMapView();return;}
-  const nights=Math.max(1,+$("hs-nights").value||1),ci=$("hs-in").value,co=ci?addDays(ci,nights):"";
-  const key=[city,ci,nights].join("|");if(key===hdata.key&&!hdata.loading){renderMapView();return;}
+  const key=city.toLowerCase();if(key===hdata.key&&!hdata.loading){renderMapView(true);return;}
   hdata={key,hotels:[],source:"",loading:true};renderMapView();
   const {name,country}=cityParts(city);
   try{
-    const r=await fetch(`${CFG.hotelsApi}?`+new URLSearchParams({city:name,country,checkin:ci,checkout:co,adults:"2"}));
+    const r=await fetch(`${CFG.hotelsApi}?`+new URLSearchParams({city:name,country}));
     const j=await r.json();if(j.error||!Array.isArray(j.hotels))throw new Error(j.error||"bad_response");
-    if(key!==[$("hs-city").value.trim(),$("hs-in").value,Math.max(1,+$("hs-nights").value||1)].join("|"))return;
-    hdata={key,hotels:j.hotels.filter(h=>h.lat&&h.lng),source:"live"};
+    if(key!==$("hs-city").value.trim().toLowerCase())return;
+    hdata={key,hotels:j.hotels.filter(h=>h.lat&&h.lng),source:"live",total:j.total||j.hotels.length};
   }catch(e){hdata={key,hotels:demoHotels(city),source:"demo",err:String(e.message||e)};}
-  renderMapView();
+  renderMapView(true);
 }
-function bestPay(total){
-  let best=null;pcards.forEach(id=>{const P=PORTAL[id];if(!P||!P.h)return;const pts=Math.ceil(total/(P.h[1]/100));if(!best||pts<best.pts)best={id,pts};});return best;
+async function fetchVisiblePrices(){
+  if(hdata.source!=="live"||!hmapObj)return;
+  const ci=$("hs-in").value;if(!ci)return;
+  const sk=stayKey(),b=hmapObj.getBounds(),c=hmapObj.getCenter();
+  const need=hdata.hotels.filter(h=>b.contains([h.lat,h.lng])&&!((sk+"|"+h.id) in priceCache))
+    .sort((a,z)=>((a.lat-c.lat)**2+(a.lng-c.lng)**2)-((z.lat-c.lat)**2+(z.lng-c.lng)**2)).slice(0,50);
+  if(!need.length)return;
+  need.forEach(h=>priceCache[sk+"|"+h.id]="pending");
+  const nights=Math.max(1,+$("hs-nights").value||1);
+  try{
+    const r=await fetch(`${CFG.ratesApi}?`+new URLSearchParams({ids:need.map(h=>h.id).join(","),checkin:ci,checkout:addDays(ci,nights),adults:"2"}));
+    const j=await r.json();const prices=j.prices||{};
+    need.forEach(h=>{priceCache[sk+"|"+h.id]=typeof prices[h.id]==="number"?prices[h.id]:null;});
+  }catch(e){need.forEach(h=>{priceCache[sk+"|"+h.id]=null;});}
+  if(sk===stayKey()){refreshIcons();renderMvList();}
 }
+function bestPay(total){let best=null;pcards.forEach(id=>{const P=PORTAL[id];if(!P||!P.h)return;const pts=Math.ceil(total/(P.h[1]/100));if(!best||pts<best.pts)best={id,pts};});return best;}
 function hotelCardHTML(h,nights){
-  const b=(h.brand||brandOf(h.name)),H=HOTELS[b],tr=H?[...pcards].filter(id=>H.r[id]).map(id=>`${cname(id).name} ${hratio(H.r[id])}`):[];
-  const per=h.price?h.price/nights:null,bp=h.price?bestPay(h.price):null;
+  const b=hb(h),H=HOTELS[b],tr=H?[...pcards].filter(id=>H.r[id]).map(id=>`${cname(id).name} ${hratio(H.r[id])}`):[];
+  const total=priceOf(h),per=total?total/nights:null,bp=total?bestPay(total):null,pend=priceCache[stayKey()+"|"+h.id]==="pending";
   return `<button type="button" class="mv-item" data-id="${esc(h.id)}">${h.photo?`<img src="${esc(h.photo)}" alt="" loading="lazy">`:`<span class="mv-ph" aria-hidden="true">${esc(brandName(b).slice(0,1))}</span>`}
     <span class="mv-txt"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.stars?` · ${"★".repeat(Math.round(h.stars))}`:""}</small>
     ${tr.length?`<small class="mv-tr">Transfer: ${esc(tr.join(" · "))}</small>`:""}</span>
-    <span class="mv-price">${per?`<b>$${Math.round(per).toLocaleString()}</b><small>per night</small>${bp?`<small>or ${fk(bp.pts)} ${esc(cname(bp.id).unit)}</small>`:""}`:`<small>No price for these dates</small>`}</span></button>`;
+    <span class="mv-price">${per?`<b>$${Math.round(per).toLocaleString()}</b><small>per night</small>${bp?`<small>or ${fk(bp.pts)} ${esc(cname(bp.id).unit)}</small>`:""}`:`<small>${pend?"Getting price…":"Zoom in for price"}</small>`}</span></button>`;
 }
 function popupHTML(h,nights){
-  const b=(h.brand||brandOf(h.name)),per=h.price?h.price/nights:null;
-  const pays=h.price?[...pcards].map(id=>{const P=PORTAL[id];if(!P||!P.h)return"";const lo=Math.ceil(h.price/(P.h[1]/100)),hi=Math.ceil(h.price/(P.h[0]/100));return `<li>${esc(cname(id).name)}: ${lo===hi?fk(lo):fk(lo)+"–"+fk(hi)} points</li>`;}).join(""):"";
-  return `<div class="pop"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.address?` · ${esc(h.address)}`:""}</small>${per?`<p>$${Math.round(per).toLocaleString()} per night · $${Math.round(h.price).toLocaleString()} total</p>`:""}${pays?`<ul>${pays}</ul>`:""}${HOTELS[b]?`<button type="button" class="btn small" data-compare="${b}" data-per="${per?Math.round(per):""}">Compare with ${esc(brandName(b))} points</button>`:""}</div>`;
+  const b=hb(h),total=priceOf(h),per=total?total/nights:null;
+  const pays=total?[...pcards].map(id=>{const P=PORTAL[id];if(!P||!P.h)return"";const lo=Math.ceil(total/(P.h[1]/100)),hi=Math.ceil(total/(P.h[0]/100));return `<li>${esc(cname(id).name)}: ${lo===hi?fk(lo):fk(lo)+"–"+fk(hi)} points</li>`;}).join(""):"";
+  return `<div class="pop"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.address?` · ${esc(h.address)}`:""}</small>${per?`<p>$${Math.round(per).toLocaleString()} per night · $${Math.round(total).toLocaleString()} total</p>`:`<p class="hint">No price for these dates yet</p>`}${pays?`<ul>${pays}</ul>`:""}${HOTELS[b]?`<button type="button" class="btn small" data-compare="${b}" data-per="${per?Math.round(per):""}">Compare with ${esc(brandName(b))} points</button>`:""}</div>`;
 }
-function renderMapView(){
-  const wrap=$("h-mapview");if(!wrap||hview!=="map")return;
-  const city=$("hs-city").value.trim(),nights=Math.max(1,+$("hs-nights").value||1),note=$("mv-note"),list=$("mv-list");
-  if(!city){note.innerHTML="";list.innerHTML=`<div class="ps-empty">Enter a city to see hotels on the map.</div>`;drawMap([],nights);return;}
-  if(hdata.loading){note.innerHTML=`<span class="mv-dot"></span>Finding hotels in ${esc(city)}…`;list.innerHTML="";return;}
-  const shown=hdata.hotels.filter(h=>!hotelSel.size||hotelSel.has((h.brand||brandOf(h.name)))).sort((a,b)=>(a.price||1e9)-(b.price||1e9));
-  note.innerHTML=hdata.source==="demo"?`<b>Example pins.</b> Add your hotel data key to show real hotels and prices (see the setup guide).`:`<b>${shown.length} hotels</b> in ${esc(city)} · prices for ${nights} night${nights>1?"s":""} from ${esc($("hs-in").value)}`;
-  list.innerHTML=shown.map(h=>hotelCardHTML(h,nights)).join("")||`<div class="ps-empty">No hotels match these brands.</div>`;
+function filteredHotels(){return hdata.hotels.filter(h=>!hotelSel.size||hotelSel.has(hb(h)));}
+function renderMvList(){
+  const list=$("mv-list"),nights=Math.max(1,+$("hs-nights").value||1);if(!list)return;
+  let shown=filteredHotels();
+  if(hmapObj&&hdata.source==="live"){const b=hmapObj.getBounds();shown=shown.filter(h=>b.contains([h.lat,h.lng]));}
+  shown.sort((a,z)=>(priceOf(a)??1e12)-(priceOf(z)??1e12)||(z.stars||0)-(a.stars||0));
+  const cap=150,more=shown.length-cap;
+  list.innerHTML=shown.slice(0,cap).map(h=>hotelCardHTML(h,nights)).join("")+(more>0?`<p class="hint" style="text-align:center">${more} more hotels in this area. Zoom in to narrow it down.</p>`:"")||`<div class="ps-empty">No hotels here match these brands. Try zooming out.</div>`;
   list.querySelectorAll(".mv-item").forEach(el=>{
     el.addEventListener("mouseenter",()=>hiPin(el.dataset.id,true));el.addEventListener("mouseleave",()=>hiPin(el.dataset.id,false));
     el.onclick=()=>focusHotel(el.dataset.id);});
-  drawMap(shown,nights);
+  const city=$("hs-city").value.trim(),note=$("mv-note");
+  if(hdata.source==="demo")note.innerHTML=`<b>Example pins.</b> Add your hotel data key to show real hotels and prices (see the setup guide).`;
+  else if(hdata.source==="live")note.innerHTML=`<b>${filteredHotels().length.toLocaleString()} hotels</b> in ${esc(city)} · ${shown.length.toLocaleString()} in this map area · prices for ${nights} night${nights>1?"s":""} from ${esc($("hs-in").value)}`;
+}
+function renderMapView(fit){
+  const wrap=$("h-mapview");if(!wrap||hview!=="map")return;
+  const city=$("hs-city").value.trim(),note=$("mv-note"),list=$("mv-list");
+  if(!city){note.innerHTML="";list.innerHTML=`<div class="ps-empty">Enter a city to see hotels on the map.</div>`;drawMap([],fit);return;}
+  if(hdata.loading){note.innerHTML=`<span class="mv-dot"></span>Finding every hotel in ${esc(city)}…`;list.innerHTML="";return;}
+  drawMap(filteredHotels(),fit);renderMvList();fetchVisiblePrices();
 }
 function hiPin(id,on){const m=hmarkers[id];const el=m&&(m.getElement?m.getElement():m);if(el)el.classList.toggle("hot",on);}
 function focusHotel(id){
   const h=hdata.hotels.find(x=>x.id===id),nights=Math.max(1,+$("hs-nights").value||1);if(!h)return;
   document.querySelectorAll(".mv-item").forEach(x=>x.classList.toggle("sel",x.dataset.id===id));
   const m=hmarkers[id];
-  if(hmapObj&&m&&m.openPopup){hmapObj.flyTo([h.lat,h.lng],Math.max(hmapObj.getZoom(),15),{duration:.6});m.openPopup();}
+  if(hmapObj&&m&&m.openPopup){if(hlayer.zoomToShowLayer)hlayer.zoomToShowLayer(m,()=>m.openPopup());else{hmapObj.flyTo([h.lat,h.lng],Math.max(hmapObj.getZoom(),15),{duration:.6});m.openPopup();}}
   else showFallbackPopup(h,nights);
 }
 function wireCompare(root){root.querySelectorAll("[data-compare]").forEach(b=>b.onclick=()=>{
   const k=b.dataset.compare;hcVals[k]=hcVals[k]||{};if(b.dataset.per)hcVals[k].cash=b.dataset.per;setHView("brands");hotelSel.clear();renderHotels();updateJump();
   const card=[...document.querySelectorAll("#h-results .chain")].find(c=>c.querySelector("h4").textContent===brandName(k));
   if(card){card.hidden=false;const d=card.querySelector("details");if(d)d.open=true;card.scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"});const inp=card.querySelector('input[data-f="pts"]');if(inp)setTimeout(()=>inp.focus({preventScroll:true}),400);}});}
-function drawMap(shown,nights){
-  const box=$("mv-map");
+function iconFor(h){const nights=Math.max(1,+$("hs-nights").value||1),t=priceOf(h);
+  return L.divIcon({className:"",html:`<span class="mk${h.demo?" demo":""}${t?"":" dot"}">${t?"$"+Math.round(t/nights).toLocaleString():""}</span>`,iconSize:null});}
+function refreshIcons(){if(!window.L)return;hdata.hotels.forEach(h=>{const m=hmarkers[h.id];if(m&&m.setIcon)m.setIcon(iconFor(h));});}
+function drawMap(shown,fit){
+  const box=$("mv-map"),nights=Math.max(1,+$("hs-nights").value||1);
   if(window.L){
-    if(!hmapObj){box.innerHTML="";hmapObj=L.map(box,{scrollWheelZoom:false,zoomControl:true});L.tileLayer(CFG.tiles.url,{attribution:CFG.tiles.attribution,maxZoom:CFG.tiles.maxZoom||19}).addTo(hmapObj);hlayer=L.layerGroup().addTo(hmapObj);
-      hmapObj.on("popupopen",e=>wireCompare(e.popup.getElement()));}
+    if(!hmapObj){box.innerHTML="";hmapObj=L.map(box,{scrollWheelZoom:false,zoomControl:true});
+      L.tileLayer(CFG.tiles.url,{attribution:CFG.tiles.attribution,maxZoom:CFG.tiles.maxZoom||19}).addTo(hmapObj);
+      hlayer=(L.markerClusterGroup?L.markerClusterGroup({showCoverageOnHover:false,maxClusterRadius:48,chunkedLoading:true}):L.layerGroup()).addTo(hmapObj);
+      hmapObj.on("popupopen",e=>wireCompare(e.popup.getElement()));
+      hmapObj.on("moveend",()=>{renderMvList();clearTimeout(pTimer);pTimer=setTimeout(fetchVisiblePrices,400);});}
     setTimeout(()=>hmapObj.invalidateSize(),50);
     hlayer.clearLayers();hmarkers={};
-    shown.forEach(h=>{const per=h.price?Math.round(h.price/nights):null;
-      const icon=L.divIcon({className:"",html:`<span class="mk${h.demo?" demo":""}">${per?"$"+per.toLocaleString():esc(brandName((h.brand||brandOf(h.name))).slice(0,1))}</span>`,iconSize:null});
-      const m=L.marker([h.lat,h.lng],{icon}).addTo(hlayer).bindPopup(popupHTML(h,nights),{maxWidth:280});
+    const ms=shown.map(h=>{const m=L.marker([h.lat,h.lng],{icon:iconFor(h)}).bindPopup(()=>popupHTML(h,Math.max(1,+$("hs-nights").value||1)),{maxWidth:280});
       m.on("click",()=>document.querySelectorAll(".mv-item").forEach(x=>{const on=x.dataset.id===h.id;x.classList.toggle("sel",on);if(on)x.scrollIntoView({block:"nearest",behavior:reduce?"auto":"smooth"});}));
-      hmarkers[h.id]=m;});
-    if(shown.length)hmapObj.fitBounds(L.latLngBounds(shown.map(h=>[h.lat,h.lng])).pad(0.15));
-    else{const c=cityCenter(cityParts($("hs-city").value.trim()).name);if(c)hmapObj.setView([c.lat,c.lng],12);}
+      hmarkers[h.id]=m;return m;});
+    if(hlayer.addLayers)hlayer.addLayers(ms);else ms.forEach(m=>m.addTo(hlayer));
+    if(fit){if(shown.length){const c=cityCenter(cityParts($("hs-city").value.trim()).name);if(c&&shown.length>40)hmapObj.setView([c.lat,c.lng],14);else hmapObj.fitBounds(L.latLngBounds(shown.map(h=>[h.lat,h.lng])).pad(0.12));}
+      else{const c=cityCenter(cityParts($("hs-city").value.trim()).name);if(c)hmapObj.setView([c.lat,c.lng],13);}}
     return;
   }
-  // fallback when the map library can't load: plot pins on a simple grid
   box.classList.add("mv-fallback");
   if(!shown.length){box.innerHTML="";return;}
   const la=shown.map(h=>h.lat),lo=shown.map(h=>h.lng),minA=Math.min(...la),maxA=Math.max(...la),minO=Math.min(...lo),maxO=Math.max(...lo);
   const px=h=>8+84*((h.lng-minO)/((maxO-minO)||1)),py=h=>8+84*(1-(h.lat-minA)/((maxA-minA)||1));
-  box.innerHTML=shown.map(h=>{const per=h.price?Math.round(h.price/nights):null;return `<span class="mk${h.demo?" demo":""}" data-id="${esc(h.id)}" style="left:${px(h)}%;top:${py(h)}%">${per?"$"+per.toLocaleString():"•"}</span>`;}).join("")+`<div class="mv-pop" id="mv-pop" hidden></div>`;
+  box.innerHTML=shown.slice(0,300).map(h=>{const t=priceOf(h);return `<span class="mk${h.demo?" demo":""}${t?"":" dot"}" data-id="${esc(h.id)}" style="left:${px(h)}%;top:${py(h)}%">${t?"$"+Math.round(t/nights).toLocaleString():""}</span>`;}).join("")+`<div class="mv-pop" id="mv-pop" hidden></div>`;
   hmarkers={};box.querySelectorAll(".mk").forEach(el=>{hmarkers[el.dataset.id]=el;el.onclick=()=>focusHotel(el.dataset.id);});
 }
 function showFallbackPopup(h,nights){const p=$("mv-pop");if(!p)return;p.innerHTML=popupHTML(h,nights)+`<button type="button" class="x mv-x" aria-label="Close">×</button>`;p.hidden=false;p.querySelector(".mv-x").onclick=()=>p.hidden=true;wireCompare(p);}
@@ -1792,7 +1840,8 @@ function setHView(v){
   if(v==="map")loadHotels();
 }
 document.querySelectorAll("#h-view button").forEach(b=>b.onclick=()=>setHView(b.dataset.v));
-["hs-city","hs-nights","hs-in"].forEach(id=>$(id).addEventListener("input",()=>{if(hview!=="map")return;clearTimeout(hTimer);hTimer=setTimeout(loadHotels,600);}));
+$("hs-city").addEventListener("input",()=>{if(hview!=="map")return;clearTimeout(hTimer);hTimer=setTimeout(loadHotels,700);});
+["hs-nights","hs-in"].forEach(id=>$(id).addEventListener("input",()=>{if(hview!=="map")return;refreshIcons();renderMvList();clearTimeout(pTimer);pTimer=setTimeout(fetchVisiblePrices,500);}));
 
 /* ---------- map + planner glue ---------- */
 let hsTouched=false,csTouched=false,lastTo="",jmap=null;
