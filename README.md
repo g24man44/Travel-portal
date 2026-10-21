@@ -20,3 +20,11 @@ Until the key is added, the hotel map shows example pins so you can see how it w
 - Flight points prices are typical saver prices, not live award seats.
 - The request inbox and owner dashboard from the Claude version need Claude's storage, so they don't run here. The "Request help" form still lets people copy their trip details and send them to you.
 - To change the photos, replace the files in `img/` and keep the same names.
+
+## Every flight (Duffel)
+
+1. Make a free account at duffel.com. In the dashboard, open Developers → Access tokens and create a token.
+2. In Netlify: Project configuration → Environment variables → Add a variable. Key: `DUFFEL_TOKEN`, value: your token. Save.
+3. Deploys → Trigger deploy → Deploy site.
+
+A test token only returns Duffel's practice airline ("Duffel Airways"). For real airlines, finish Duffel's live activation in their dashboard and swap in the live token.

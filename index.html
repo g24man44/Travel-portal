@@ -684,6 +684,46 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
 .card{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:12px}
 .list{display:flex;flex-direction:column;gap:12px}
 
+.hl-bar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.hl-bar .mv-note{margin:0;flex:1 1 280px}
+.hl-ctrl{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.hl-ctrl label.inline-sel{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted)}
+.hl-ctrl select{font:inherit;font-size:14px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.hl-ctrl .check{display:flex;flex-direction:row;align-items:center;gap:6px;font-size:14px;padding-bottom:8px}
+.hl-list{display:flex;flex-direction:column;gap:10px}
+.hl{display:grid;grid-template-columns:150px minmax(0,1fr) 250px;gap:16px;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:12px;align-items:start}
+.hl img,.hl-ph{width:150px;height:120px;border-radius:12px;object-fit:cover}
+.hl-ph{display:grid;place-items:center;background:var(--bg);font-family:var(--f-display);font-size:40px;color:var(--gold)}
+.hl-main{display:flex;flex-direction:column;gap:3px;min-width:0;padding-top:4px}
+.hl-main b{font-size:17px}
+.hl-main small{font-size:13px;color:var(--muted)}
+.hl-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mtag{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:3px 9px;background:var(--bg);border:1px solid var(--line);color:var(--muted)}
+.mtag.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,var(--line))}
+.hl-price{display:flex;flex-direction:column;align-items:flex-end;text-align:right;gap:2px}
+.hl-price b{font-size:22px;font-variant-numeric:tabular-nums}
+.hl-price small{font-size:12px;color:var(--muted)}
+.hl-pts{font-weight:700;font-size:14px;margin-top:4px}
+.hl-acts,.fl-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px}
+.hl-acts .btn,.fl-acts .btn{text-decoration:none}
+@media (max-width:820px){.hl{grid-template-columns:96px minmax(0,1fr)}.hl img,.hl-ph{width:96px;height:96px}.hl-price{grid-column:1/-1;align-items:flex-start;text-align:left;border-top:1px dashed var(--line);padding-top:10px}.hl-acts{justify-content:flex-start}}
+.fl{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.2fr) 230px;grid-template-areas:"air times price" "award award acts";gap:12px 18px;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:16px 18px;align-items:start}
+.fl-air{grid-area:air;display:flex;gap:12px;align-items:flex-start;min-width:0}
+.fl-logo{width:44px;height:44px;border-radius:12px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-family:var(--f-mono);font-weight:600;flex:none}
+.fl-air div{display:flex;flex-direction:column;min-width:0}
+.fl-air b{font-size:15.5px}
+.fl-air small{font-size:12px;color:var(--muted)}
+.fl-times{grid-area:times;display:flex;flex-direction:column;gap:8px}
+.fl-sl b{font-size:17px;font-variant-numeric:tabular-nums}
+.fl-sl sup{font-size:11px;color:var(--warn);margin-left:2px}
+.fl-sl small{display:block;font-size:12.5px;color:var(--muted)}
+.fl-price{grid-area:price;display:flex;flex-direction:column;align-items:flex-end;text-align:right;gap:2px}
+.fl-price b{font-size:22px;font-variant-numeric:tabular-nums}
+.fl-price small{font-size:12px;color:var(--muted)}
+.fl-award{grid-area:award}
+.fl-acts{grid-area:acts;margin-top:0}
+@media (max-width:820px){.fl{grid-template-columns:minmax(0,1fr);grid-template-areas:"air" "times" "price" "award" "acts"}.fl-price{align-items:flex-start;text-align:left}.fl-acts{justify-content:flex-start}}
+
 </style>
 
 <header class="top gut">
@@ -762,7 +802,9 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
       <section class="rsec" id="sec-flights">
         <div class="rsec-h"><span class="rsec-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M21 15.5v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0v5l-8 5v2l8-2.5v5l-2 1.5v1.5l3.5-1 3.5 1V20l-2-1.5v-5l8 2.5Z" fill="currentColor"/></svg></span><div><small>Getting there</small><h3 id="fl-title">Flights</h3></div></div>
         <div id="fl-lounges"></div>
-        <div class="tool-grid"><div class="ps-out">
+        <div class="viewbar"><div class="tog" id="f-view"><button type="button" data-v="flights" aria-pressed="true">All flights</button><button type="button" data-v="points" aria-pressed="false">Points options</button></div></div>
+        <div id="f-listview"><div class="hl-bar"><div class="mv-note" id="fv-note"></div><div class="hl-ctrl"><label for="fv-sort" class="inline-sel">Sort by<select id="fv-sort"><option value="rec">Recommended</option><option value="cheap">Cheapest</option><option value="fast">Fastest</option><option value="early">Earliest departure</option><option value="pts">Fewest points</option></select></label><label class="check" for="fv-nonstop"><input type="checkbox" id="fv-nonstop"> Nonstop only</label></div></div><div class="filter-row" id="fv-air"></div><div class="hl-list" id="fv-list"></div><button type="button" class="more-btn" id="fv-more" hidden>Show more</button></div>
+        <div class="tool-grid" id="f-points" hidden><div class="ps-out">
           <div class="ps-summary" id="ps-summary"></div>
           <div class="filter-row" id="ps-filter"></div>
           <div class="ps-results" id="ps-results"></div>
@@ -777,12 +819,13 @@ body:not(.on-hero) .ownerbtn{color:var(--ink)}
           <label for="hs-in">Check-in<input id="hs-in" type="date"></label>
           <label for="hs-nights" class="ps-pax">Nights<input id="hs-nights" type="number" min="1" max="30" value="3"></label>
         </div>
-        <div class="viewbar"><div class="tog" id="h-view"><button type="button" data-v="brands" aria-pressed="true">Compare brands</button><button type="button" data-v="map" aria-pressed="false">Map of every hotel</button></div></div>
+        <div class="viewbar"><div class="tog" id="h-view"><button type="button" data-v="list" aria-pressed="true">All hotels</button><button type="button" data-v="map" aria-pressed="false">Map</button><button type="button" data-v="brands" aria-pressed="false">Compare brands</button></div></div>
+        <div class="filter-row" id="h-filter"></div>
+        <div id="h-listview"><div class="hl-bar"><div class="mv-note" id="hl-note"></div><div class="hl-ctrl"><label for="hl-sort" class="inline-sel">Sort by<select id="hl-sort"><option value="rec">Recommended</option><option value="plow">Price: low to high</option><option value="phigh">Price: high to low</option><option value="stars">Star rating</option><option value="pts">Fewest points</option></select></label><label for="hl-stars" class="inline-sel">Stars<select id="hl-stars"><option value="0">Any</option><option value="3">3+</option><option value="4">4+</option><option value="5">5</option></select></label></div></div><div class="hl-list" id="hl-list"></div><button type="button" class="more-btn" id="hl-more" hidden>Show more</button></div>
         <div id="h-mapview" hidden><div class="mv-note" id="mv-note"></div><div class="mv"><div class="mv-list" id="mv-list"></div><div class="mv-map" id="mv-map"></div></div></div>
-        <div class="tool-grid" id="h-brands"><div class="ps-out">
+        <div class="tool-grid" id="h-brands" hidden><div class="ps-out">
           <div class="ps-summary" id="h-summary"></div>
           <div id="h-map"></div>
-          <div class="filter-row" id="h-filter"></div>
           <div class="ps-results" id="h-results"></div>
           <p class="ps-fine">Card values: Capital One 1¢ per mile on Capital One Travel, or when you cover a travel purchase within 90 days. Chase 1¢, or up to 2¢ on select hotels with Points Boost. Amex 0.7¢ for hotels on Amex Travel. Citi and Wells Fargo 1¢. Bilt 1.25¢ on Bilt Travel. Stays booked through a card's travel site usually don't earn hotel points or elite perks.</p>
         </div><aside class="tool-side" id="h-side"></aside></div>
@@ -1576,7 +1619,7 @@ function renderCardPicker(){
   document.querySelectorAll(".pcards-host").forEach(h=>{h.innerHTML=html;h.querySelectorAll(".pcard").forEach(b=>b.onclick=()=>{const id=b.dataset.c;if(pcards.has(id)){if(pcards.size>1)pcards.delete(id);}else pcards.add(id);renderCardPicker();runSearch();if(window.__stay)window.__stay();});});
 }
 function regionFor(code){return AP[(code||"").trim().toUpperCase()]||null;}
-function runSearch(){runSearchCore();if(window.__ready)afterSearch();}
+function runSearch(){runSearchCore();if(window.__ready)afterSearch();if(window.__fl)window.__fl();}
 function runSearchCore(){
   const from=$("ps-from").value.trim().toUpperCase(),to=$("ps-to").value.trim().toUpperCase();
   const pickR=$("ps-region").value;
@@ -1748,7 +1791,7 @@ function renderHotels(){
     <div class="hmap-body"><small>Map view</small><b>See every hotel in ${esc(city)} on a map</b><p>See every hotel in the area with nightly prices, including independent hotels, then compare the best way to pay with your cards.</p>
     <div class="hmap-acts"><button type="button" class="btn small" data-hview="map">Show every hotel on the map</button></div></div></div>`:"";
   $("h-map").querySelectorAll("[data-hview]").forEach(b=>b.onclick=()=>setHView("map"));
-  if(hview==="map")renderMapView();
+  hotelsRefresh();
   $("h-summary").innerHTML=`<div><small>${city?esc(city)+" · ":""}${$("hs-nights").value||1} night${(+$("hs-nights").value||1)>1?"s":""}</small><b>${show.length} hotel brand${show.length>1?"s":""} to compare</b></div>`;
   $("h-results").innerHTML=show.map(k=>{const H=HOTELS[k];
     const mine=[...pcards].filter(id=>H.r[id]).map(id=>`${cname(id).name} ${hratio(H.r[id])}`);
@@ -1809,7 +1852,7 @@ function brandName(k){return HOTELS[k]?HOTELS[k].short:"Independent";}
 function cityParts(city){const m=city.match(/^(.*?),\s*([A-Za-z]{2})$/);const name=(m?m[1]:city).trim();return{name,country:(m?m[2]:(CC[name]||"US")).toUpperCase()};}
 function cityCenter(name){const p=PINS.find(x=>x.n.toLowerCase()===name.toLowerCase());return p?{lat:p.lat,lng:p.lon}:null;}
 function addDays(d,n){const t=new Date(d+"T12:00:00");t.setDate(t.getDate()+n);return t.toISOString().slice(0,10);}
-let hview="brands",hdata={key:"",hotels:[],source:""},hmapObj=null,hlayer=null,hmarkers={},hTimer=null,pTimer=null;
+let hview="list",hdata={key:"",hotels:[],source:""},hmapObj=null,hlayer=null,hmarkers={},hTimer=null,pTimer=null;
 const priceCache={};
 (function initCheckin(){const t=new Date();t.setDate(t.getDate()+30);$("hs-in").value=t.toISOString().slice(0,10);})();
 function stayKey(){const n=Math.max(1,+$("hs-nights").value||1),ci=$("hs-in").value;return `${ci}|${n}`;}
@@ -1819,20 +1862,17 @@ function demoHotels(city){
   return bs.map((b,i)=>({id:"demo"+i,brand:b,name:`Example ${b==="other"?"boutique":brandName(b)} hotel ${i+1}`,lat:c.lat+Math.sin(i*2.3)*0.022,lng:c.lng+Math.cos(i*1.7)*0.032,stars:3+(i%3),address:"Example address",photo:"",price:(150+((i*53)%260))*(+$("hs-nights").value||1),demo:true}));
 }
 async function loadHotels(){
-  const city=$("hs-city").value.trim();if(!city){hdata={key:"",hotels:[],source:""};renderMapView();return;}
-  const key=city.toLowerCase();if(key===hdata.key&&!hdata.loading){renderMapView(true);return;}
-  hdata={key,hotels:[],source:"",loading:true};renderMapView();
+  const city=$("hs-city").value.trim();if(!city){hdata={key:"",hotels:[],source:""};hotelsRefresh();return;}
+  const key=city.toLowerCase();if(key===hdata.key&&!hdata.loading){hotelsRefresh(true);loadAllPrices();return;}
+  hdata={key,hotels:[],source:"",loading:true};hotelsRefresh();
   const {name,country}=cityParts(city);
   try{
     const r=await fetch(`${CFG.hotelsApi}?`+new URLSearchParams({city:name,country}));
     const j=await r.json();if(j.error||!Array.isArray(j.hotels))throw new Error(j.error||"bad_response");
     if(key!==$("hs-city").value.trim().toLowerCase())return;
     hdata={key,hotels:j.hotels.filter(h=>h.lat&&h.lng),source:"live",total:j.total||j.hotels.length};
-  }catch(e){
-    // Never disguise a failed live API request as ten example hotels.
-    hdata={key,hotels:[],source:"error",err:String(e.message||e)};
-  }
-  renderMapView(true);
+  }catch(e){hdata={key,hotels:demoHotels(city),source:"demo",err:String(e.message||e)};}
+  hotelsRefresh(true);loadAllPrices();
 }
 async function fetchVisiblePrices(){
   if(hdata.source!=="live"||!hmapObj)return;
@@ -1885,12 +1925,7 @@ function renderMapView(fit){
   const wrap=$("h-mapview");if(!wrap||hview!=="map")return;
   const city=$("hs-city").value.trim(),note=$("mv-note"),list=$("mv-list");
   if(!city){note.innerHTML="";list.innerHTML=`<div class="ps-empty">Enter a city to see hotels on the map.</div>`;drawMap([],fit);return;}
-  if(hdata.loading){note.innerHTML=`<span class="mv-dot"></span>Finding hotels in ${esc(city)}…`;list.innerHTML="";return;}
-  if(hdata.source==="error"){
-    note.innerHTML=`<b>Live hotel search failed.</b> ${esc(hdata.err||"Unknown API error")} <span>Country sent: ${esc(cityParts(city).country)}. Check the Netlify function logs and LITEAPI_KEY setting.</span>`;
-    list.innerHTML=`<div class="ps-empty">No example hotels are being shown. The live hotel search failed, so these results are intentionally left empty rather than displaying fake sample hotels.</div>`;
-    drawMap([],fit);return;
-  }
+  if(hdata.loading){note.innerHTML=`<span class="mv-dot"></span>Finding every hotel in ${esc(city)}…`;list.innerHTML="";return;}
   drawMap(filteredHotels(),fit);renderMvList();fetchVisiblePrices();
 }
 function hiPin(id,on){const m=hmarkers[id];const el=m&&(m.getElement?m.getElement():m);if(el)el.classList.toggle("hot",on);}
@@ -1936,17 +1971,157 @@ function drawMap(shown,fit){
 function showFallbackPopup(h,nights){const p=$("mv-pop");if(!p)return;p.innerHTML=popupHTML(h,nights)+`<button type="button" class="x mv-x" aria-label="Close">×</button>`;p.hidden=false;p.querySelector(".mv-x").onclick=()=>p.hidden=true;wireCompare(p);}
 function setHView(v){
   hview=v;document.querySelectorAll("#h-view button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
-  $("h-brands").hidden=v!=="brands";$("h-mapview").hidden=v!=="map";
-  if(v==="map")loadHotels();
+  $("h-brands").hidden=v!=="brands";$("h-mapview").hidden=v!=="map";$("h-listview").hidden=v!=="list";
+  if(v!=="brands")loadHotels();
 }
 document.querySelectorAll("#h-view button").forEach(b=>b.onclick=()=>setHView(b.dataset.v));
-$("hs-city").addEventListener("input",()=>{if(hview!=="map")return;clearTimeout(hTimer);hTimer=setTimeout(loadHotels,700);});
-["hs-nights","hs-in"].forEach(id=>$(id).addEventListener("input",()=>{if(hview!=="map")return;refreshIcons();renderMvList();clearTimeout(pTimer);pTimer=setTimeout(fetchVisiblePrices,500);}));
+$("hs-city").addEventListener("input",()=>{if(hview==="brands")return;hlShown=30;clearTimeout(hTimer);hTimer=setTimeout(loadHotels,700);});
+["hs-nights","hs-in"].forEach(id=>$(id).addEventListener("input",()=>{if(hview==="brands")return;if(hview==="map"){refreshIcons();renderMvList();}else renderHList();clearTimeout(pTimer);pTimer=setTimeout(()=>{loadAllPrices();if(hview==="map")fetchVisiblePrices();},600);}));
 
 function brandMedian(k){
   const n=Math.max(1,+$("hs-nights").value||1),v=hdata.hotels.filter(h=>hb(h)===k).map(h=>priceOf(h)).filter(x=>typeof x==="number").map(x=>x/n).sort((a,b)=>a-b);
   return v.length?Math.round(v[Math.floor(v.length/2)]):null;
 }
+
+/* ---------- every hotel: sortable list ---------- */
+let hlShown=30,hlSort="rec",hlStars=0,allPriceRun=0,hlTimer=null;
+function hotelsRefresh(fit){if(hview==="map")renderMapView(fit);else if(hview==="list")renderHList();}
+function scheduleHotelRender(){clearTimeout(hlTimer);hlTimer=setTimeout(()=>{if(hview==="list")renderHList();else if(hview==="map"){refreshIcons();renderMvList();}},350);}
+async function loadAllPrices(){
+  if(hdata.source!=="live")return;const ci=$("hs-in").value;if(!ci)return;
+  const run=++allPriceRun,sk=stayKey(),nights=Math.max(1,+$("hs-nights").value||1),co=addDays(ci,nights);
+  const todo=hdata.hotels.filter(h=>!((sk+"|"+h.id) in priceCache)).sort((a,b)=>(b.stars||0)-(a.stars||0));
+  const batches=[];for(let i=0;i<todo.length;i+=50)batches.push(todo.slice(i,i+50));
+  let idx=0;
+  const worker=async()=>{while(idx<batches.length&&run===allPriceRun&&sk===stayKey()){const b=batches[idx++];b.forEach(h=>priceCache[sk+"|"+h.id]="pending");
+    try{const r=await fetch(`${CFG.ratesApi}?`+new URLSearchParams({ids:b.map(h=>h.id).join(","),checkin:ci,checkout:co,adults:"2"}));const j=await r.json();const pr=j.prices||{};b.forEach(h=>priceCache[sk+"|"+h.id]=typeof pr[h.id]==="number"?pr[h.id]:null);}
+    catch(e){b.forEach(h=>priceCache[sk+"|"+h.id]=null);}
+    scheduleHotelRender();}};
+  await Promise.all([worker(),worker(),worker()]);
+}
+function bestPoints(h){
+  const total=priceOf(h);if(!total)return null;const nights=Math.max(1,+$("hs-nights").value||1),b=hb(h),H=HOTELS[b];
+  let best=null;const bp=bestPay(total);if(bp)best={pts:bp.pts,unit:cname(bp.id).unit,how:`on ${TRAVEL[bp.id]?TRAVEL[bp.id].n:"its travel site"}`};
+  const est=H?estPts(b,total/nights):null;
+  if(est&&H)pcards.forEach(id=>{const r=H.r[id];if(!r)return;const p=Math.ceil(est.pts*nights/r/1000)*1000;if(!best||p<best.pts)best={pts:p,unit:cname(id).unit,how:`transferred to ${H.short} (estimate)`};});
+  return best;
+}
+function recScore(h){
+  const nights=Math.max(1,+$("hs-nights").value||1),t=priceOf(h),b=hb(h),H=HOTELS[b];
+  let s=(h.stars||3)*12+(h.photo?4:0);
+  if(t)s+=40-Math.min(30,(t/nights)/25);else s-=40;
+  if(H&&[...pcards].some(id=>H.r[id]))s+=12;
+  if(statusFor(b).length)s+=8;
+  return s;
+}
+function hlItemHTML(h,nights){
+  const b=hb(h),H=HOTELS[b],total=priceOf(h),per=total?total/nights:null,pend=priceCache[stayKey()+"|"+h.id]==="pending";
+  const tr=H?[...pcards].filter(id=>H.r[id]).map(id=>`${cname(id).name} ${hratio(H.r[id])}`):[],st=statusFor(b);
+  const best=bestPoints(h),est=per&&H?estPts(b,per):null;
+  const book=H&&["hilton","marriott","hyatt"].includes(b)?brandSearch(b,h.name):`https://www.google.com/travel/search?q=${encodeURIComponent(h.name+" "+$("hs-city").value.trim())}`;
+  return `<article class="hl" data-id="${esc(h.id)}">
+    ${h.photo?`<img src="${esc(h.photo)}" alt="" loading="lazy">`:`<span class="hl-ph" aria-hidden="true">${esc(brandName(b).slice(0,1))}</span>`}
+    <div class="hl-main"><b>${esc(h.name)}</b><small>${esc(brandName(b))}${h.stars?` · ${"★".repeat(Math.round(h.stars))}`:""}</small>${h.address?`<small>${esc(h.address)}</small>`:""}
+      <div class="hl-tags">${tr.length?`<span class="mtag ok">Transfer: ${esc(tr.join(" · "))}</span>`:""}${st.map(x=>`<span class="mtag">${esc(x.t)} with ${esc(x.p.name)}</span>`).join("")}</div></div>
+    <div class="hl-price">${per?`<b>$${Math.round(per).toLocaleString()}</b><small>per night · $${Math.round(total).toLocaleString()} total</small>${best?`<span class="hl-pts">${fk(best.pts)} ${esc(best.unit)}</span><small>${esc(best.how)}</small>`:""}${est?`<small>≈ ${fk(est.pts)} ${esc(H.short)} pts a night</small>`:""}`:`<small>${pend?"Getting price…":hdata.source==="live"?"No rooms for these dates":"—"}</small>`}
+      <div class="hl-acts"><a class="btn small" href="${book}" target="_blank" rel="noopener">Book this hotel</a><button type="button" class="btn ghost small" data-hlmap="${esc(h.id)}">Map</button>${H?`<button type="button" class="btn ghost small" data-compare="${b}" data-per="${per?Math.round(per):""}">Ways to pay</button>`:""}</div></div>
+  </article>`;
+}
+function renderHList(){
+  const wrap=$("h-listview");if(!wrap||hview!=="list")return;
+  const city=$("hs-city").value.trim(),note=$("hl-note"),list=$("hl-list"),nights=Math.max(1,+$("hs-nights").value||1);
+  if(!city){note.innerHTML="";list.innerHTML=`<div class="ps-empty">Enter a city to see every hotel.</div>`;$("hl-more").hidden=true;return;}
+  if(hdata.loading){note.innerHTML=`<span class="mv-dot"></span>Finding every hotel in ${esc(city)}…`;list.innerHTML="";$("hl-more").hidden=true;return;}
+  let items=filteredHotels().filter(h=>!hlStars||(h.stars||0)>=hlStars);
+  const P=h=>priceOf(h);
+  const cmp={rec:(a,b)=>recScore(b)-recScore(a),plow:(a,b)=>(P(a)??1e12)-(P(b)??1e12),phigh:(a,b)=>(P(b)??-1)-(P(a)??-1),stars:(a,b)=>(b.stars||0)-(a.stars||0)||(P(a)??1e12)-(P(b)??1e12),pts:(a,b)=>((bestPoints(a)||{}).pts??1e12)-((bestPoints(b)||{}).pts??1e12)}[hlSort];
+  items.sort(cmp);
+  const sk=stayKey(),priced=hdata.hotels.filter(h=>typeof priceCache[sk+"|"+h.id]==="number"||h.demo).length,pending=hdata.hotels.filter(h=>priceCache[sk+"|"+h.id]==="pending").length;
+  note.innerHTML=hdata.source==="demo"?`<b>Example hotels.</b> Add your hotel data key to show every real hotel and price.`:`<b>${items.length.toLocaleString()} hotels</b> in ${esc(city)} · ${priced.toLocaleString()} with prices for ${nights} night${nights>1?"s":""}${pending?` · <span class="mv-dot"></span>loading more prices…`:""}`;
+  list.innerHTML=items.slice(0,hlShown).map(h=>hlItemHTML(h,nights)).join("")||`<div class="ps-empty">No hotels match these filters.</div>`;
+  $("hl-more").hidden=items.length<=hlShown;$("hl-more").textContent=`Show more hotels (${(items.length-hlShown).toLocaleString()} left)`;
+  list.querySelectorAll("[data-hlmap]").forEach(b=>b.onclick=()=>{setHView("map");setTimeout(()=>focusHotel(b.dataset.hlmap),400);});
+  wireCompare(list);
+}
+$("hl-sort").onchange=e=>{hlSort=e.target.value;hlShown=30;renderHList();};
+$("hl-stars").onchange=e=>{hlStars=+e.target.value;hlShown=30;renderHList();};
+$("hl-more").onclick=()=>{hlShown+=30;renderHList();};
+window.__hotelsShown=()=>{if(hview!=="brands")loadHotels();};
+
+/* ---------- every flight (standalone site, Duffel) ---------- */
+let fview="flights",fdata={key:"",offers:[],state:""},fSort="rec",fNonstop=false,fShown=25,fTimer=null;const fAir=new Set();
+const AIR_ALIAS={"All Nippon Airways":"ANA","Japan Airlines":"JAL"};
+function isoDur(s){const m=/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/.exec(s||"");return m?((+m[1]||0)*1440+(+m[2]||0)*60+(+m[3]||0)):0;}
+function hmin(m){return `${Math.floor(m/60)}h ${m%60}m`;}
+function clock(iso){if(!iso)return"";const h=+iso.slice(11,13),m=iso.slice(14,16);return `${(h%12)||12}:${m} ${h<12?"AM":"PM"}`;}
+function dayDiff(a,b){return Math.round((new Date(b.slice(0,10)+"T12:00:00")-new Date(a.slice(0,10)+"T12:00:00"))/864e5);}
+function sliceDur(s){if(s.dur)return isoDur(s.dur);return 0;}
+function airMatch(fly,name){if(!name)return false;const n=name.toLowerCase();return flyList(fly).some(a=>n.includes(a.toLowerCase())||AIR_ALIAS[name]===a);}
+function awardFor(o){
+  const from=o.slices[0].from,to=o.slices[0].to,fr=regionFor(from);let reg=regionFor(to);if(!reg)return null;if(fr==="hi"&&reg==="dom")reg="hi";
+  const carriers=[...new Set(o.slices.flatMap(s=>s.segs.map(g=>g.carrier)).filter(Boolean))];
+  let best=null;(ROUTES[reg]||[]).forEach(opt=>{const m=opt[pcabin];if(!m)return;if(!carriers.every(c=>airMatch(opt.fly,c)))return;const P=PROGS[opt.p];
+    pcards.forEach(cid=>{const r=P.r[cid];if(!r)return;const lo=cardPts(m[0],r);if(!best||lo<best.lo)best={lo,cid,opt,P};});});
+  return best;
+}
+function dedupe(offers){const seen={};offers.forEach(o=>{const sig=o.slices.map(s=>s.segs.map(g=>g.code+g.num).join("-")+s.dep).join("|");if(!seen[sig]||o.price<seen[sig].price)seen[sig]=o;});return Object.values(seen);}
+async function loadFlights(){
+  const from=$("ps-from").value.trim().toUpperCase(),to=$("ps-to").value.trim().toUpperCase(),date=$("ps-date").value,ret=pTrip==="rt"?$("ps-ret").value:"",pax=Math.max(1,+$("ps-pax").value||1),cab={e:"economy",b:"business",f:"first"}[pcabin];
+  if(pTrip==="mc"||!/^[A-Z]{3}$/.test(from)||!/^[A-Z]{3}$/.test(to)||!date){fdata={key:"",offers:[],state:pTrip==="mc"?"mc":"need"};renderFList();return;}
+  const key=[from,to,date,ret,pax,cab].join("|");if(key===fdata.key&&fdata.state==="ok"){renderFList();return;}
+  fdata={key,offers:[],state:"loading"};renderFList();
+  try{
+    const r=await fetch(`${CFG.flightsApi||"/api/flights"}?`+new URLSearchParams({from,to,date,ret,adults:String(pax),cabin:cab}));
+    const j=await r.json();if(key!==fdata.key)return;if(j.error)throw new Error(j.error);
+    fdata={key,offers:dedupe((j.offers||[]).filter(o=>o.slices&&o.slices.length&&o.price)),state:"ok",test:!!j.test};fAir.clear();fShown=25;
+  }catch(e){if(key!==fdata.key)return;fdata={key,offers:[],state:"error",err:String(e.message||e)};}
+  renderFList();
+}
+function flCardHTML(o,minP,minD){
+  const pax=Math.max(1,+$("ps-pax").value||1),aw=awardFor(o),bp=bestPay(o.price);
+  const ops=[...new Set(o.slices.flatMap(s=>s.segs.map(g=>g.op||g.carrier)))].filter(Boolean);
+  const date=$("ps-date").value;
+  const slices=o.slices.map((s,i)=>{const dd=s.dep&&s.arr?dayDiff(s.dep,s.arr):0;
+    return `<div class="fl-sl"><b>${clock(s.dep)} → ${clock(s.arr)}${dd>0?`<sup>+${dd}</sup>`:""}</b><small>${esc(s.from)}–${esc(s.to)} · ${hmin(sliceDur(s))} · ${s.stops?`${s.stops} stop${s.stops>1?"s":""} (${esc(s.via.join(", "))})`:"Nonstop"}${o.slices.length>1?` · ${i?"Return":"Outbound"}`:""}</small></div>`;}).join("");
+  const awardLink=aw?flightDeepLink(aw.opt.p,o.slices[0].from,o.slices[0].to,date,pax):null;
+  return `<article class="fl">
+    <div class="fl-air"><span class="fl-logo">${esc(o.code||"✈")}</span><div><b>${esc(o.airline||"")}</b><small>Operated by ${esc(ops.join(", "))}</small><small>${esc(o.slices[0].segs.map(g=>g.code+" "+g.num).join(" · "))}</small></div></div>
+    <div class="fl-times">${slices}</div>
+    <div class="fl-price"><b>$${Math.round(o.price).toLocaleString()}</b><small>total${pax>1?` for ${pax} travelers`:""}</small>${bp?`<span class="hl-pts">${fk(bp.pts)} ${esc(cname(bp.id).unit)}</span><small>paying the fare on ${esc(TRAVEL[bp.id]?TRAVEL[bp.id].n:"its travel site")}</small>`:""}</div>
+    <div class="fl-award">${aw?`<span class="mtag ok">Award seats: from ${fk(aw.lo*pax*(o.slices.length))} ${esc(cname(aw.cid).unit)} via ${esc(aw.P.n)} (typical saver)</span>`:`<span class="mtag">No typical award price for this airline with your cards</span>`}</div>
+    <div class="fl-acts">${aw?`<a class="btn small" href="${awardLink.url}" target="_blank" rel="noopener">Book with points on ${esc(PSHORT[aw.opt.p]||aw.P.n)}</a>`:""}${bp&&TRAVEL[bp.id]?`<a class="btn ghost small" href="${TRAVEL[bp.id].u}" target="_blank" rel="noopener">Pay the fare on ${esc(TRAVEL[bp.id].n)}</a>`:""}</div>
+  </article>`;
+}
+function renderFList(){
+  const note=$("fv-note"),list=$("fv-list");if(!note)return;
+  $("fv-more").hidden=true;$("f-points").hidden=!(fview==="points"||fdata.state==="error"||fdata.state==="mc");
+  if(fdata.state==="mc"){note.innerHTML="Multi-city trips show points options only. Switch to One way or Round trip to see every flight.";list.innerHTML="";return;}
+  if(fdata.state==="need"){note.innerHTML="Enter where you're flying from, where you're going and a date.";list.innerHTML="";return;}
+  if(fdata.state==="loading"){note.innerHTML=`<span class="mv-dot"></span>Searching every flight…`;list.innerHTML="";$("fv-air").innerHTML="";return;}
+  if(fdata.state==="error"){note.innerHTML=fdata.err==="missing_key"?`<b>Flight search isn't connected yet.</b> Add your Duffel key to show every flight (see the setup guide). The points options below still work.`:`We couldn't load flights just now. Try again in a moment, or use the points options.`;list.innerHTML="";return;}
+  const airs={};fdata.offers.forEach(o=>airs[o.airline]=(airs[o.airline]||0)+1);
+  const ak=Object.keys(airs).sort((a,b)=>airs[b]-airs[a]);
+  chips($("fv-air"),ak,{},fAir,()=>{fShown=25;renderFList();},"All airlines");
+  let items=fdata.offers.filter(o=>(!fNonstop||o.slices.every(s=>!s.stops))&&(!fAir.size||fAir.has(o.airline)));
+  const minP=Math.min(...items.map(o=>o.price)),dur=o=>o.slices.reduce((t,s)=>t+sliceDur(s),0),minD=Math.min(...items.map(dur));
+  const rec=o=>o.price/minP*50+dur(o)/minD*30+o.slices.reduce((t,s)=>t+s.stops,0)*12-(awardFor(o)?8:0);
+  const cmp={rec:(a,b)=>rec(a)-rec(b),cheap:(a,b)=>a.price-b.price,fast:(a,b)=>dur(a)-dur(b),early:(a,b)=>(a.slices[0].dep||"").localeCompare(b.slices[0].dep||""),pts:(a,b)=>((awardFor(a)||{}).lo??1e12)-((awardFor(b)||{}).lo??1e12)}[fSort];
+  items.sort(cmp);
+  note.innerHTML=`<b>${items.length.toLocaleString()} flights</b>${fdata.test?" · test data from Duffel's practice airline":""} · cash prices with points options for each`;
+  list.innerHTML=items.slice(0,fShown).map(o=>flCardHTML(o,minP,minD)).join("")||`<div class="ps-empty">No flights match these filters.</div>`;
+  $("fv-more").hidden=items.length<=fShown;$("fv-more").textContent=`Show more flights (${items.length-fShown} left)`;
+}
+function setFView(v){
+  fview=v;document.querySelectorAll("#f-view button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===v));
+  $("f-listview").hidden=v!=="flights";$("f-points").hidden=v!=="points";
+  if(v==="flights")loadFlights();
+}
+document.querySelectorAll("#f-view button").forEach(b=>b.onclick=()=>setFView(b.dataset.v));
+$("fv-sort").onchange=e=>{fSort=e.target.value;fShown=25;renderFList();};
+$("fv-nonstop").onchange=e=>{fNonstop=e.target.checked;fShown=25;renderFList();};
+$("fv-more").onclick=()=>{fShown+=25;renderFList();};
+window.__fl=()=>{if(fview!=="flights")return;clearTimeout(fTimer);fTimer=setTimeout(loadFlights,700);};
+setFView("flights");
 
 /* ---------- map + planner glue ---------- */
 let hsTouched=false,csTouched=false,lastTo="",jmap=null;
@@ -2000,7 +2175,7 @@ function setMode(m,scroll){
   ["flights","hotels","cars"].forEach(k=>$("sec-"+k).hidden=k!==m);
   if(m==="hotels"){$("hx-city").value=$("hs-city").value;$("hx-nights").value=$("hs-nights").value;}
   if(m==="cars"){$("hx-ap").value=$("cs-ap").value;$("hx-days").value=$("cs-days").value;$("hx-cash").value=$("cs-cash").value;}
-  updateJump();
+  updateJump();if(m==="hotels"&&window.__hotelsShown)window.__hotelsShown();
   if(scroll)$("results").scrollIntoView({behavior:reduce?"auto":"smooth",block:"start"});
 }
 document.querySelectorAll(".mode button").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
