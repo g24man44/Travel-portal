@@ -1828,7 +1828,10 @@ async function loadHotels(){
     const j=await r.json();if(j.error||!Array.isArray(j.hotels))throw new Error(j.error||"bad_response");
     if(key!==$("hs-city").value.trim().toLowerCase())return;
     hdata={key,hotels:j.hotels.filter(h=>h.lat&&h.lng),source:"live",total:j.total||j.hotels.length};
-  }catch(e){hdata={key,hotels:demoHotels(city),source:"demo",err:String(e.message||e)};}
+  }catch(e){
+    // Never disguise a failed live API request as ten example hotels.
+    hdata={key,hotels:[],source:"error",err:String(e.message||e)};
+  }
   renderMapView(true);
 }
 async function fetchVisiblePrices(){
@@ -1882,7 +1885,12 @@ function renderMapView(fit){
   const wrap=$("h-mapview");if(!wrap||hview!=="map")return;
   const city=$("hs-city").value.trim(),note=$("mv-note"),list=$("mv-list");
   if(!city){note.innerHTML="";list.innerHTML=`<div class="ps-empty">Enter a city to see hotels on the map.</div>`;drawMap([],fit);return;}
-  if(hdata.loading){note.innerHTML=`<span class="mv-dot"></span>Finding every hotel in ${esc(city)}…`;list.innerHTML="";return;}
+  if(hdata.loading){note.innerHTML=`<span class="mv-dot"></span>Finding hotels in ${esc(city)}…`;list.innerHTML="";return;}
+  if(hdata.source==="error"){
+    note.innerHTML=`<b>Live hotel search failed.</b> ${esc(hdata.err||"Unknown API error")} <span>Country sent: ${esc(cityParts(city).country)}. Check the Netlify function logs and LITEAPI_KEY setting.</span>`;
+    list.innerHTML=`<div class="ps-empty">No example hotels are being shown. The live hotel search failed, so these results are intentionally left empty rather than displaying fake sample hotels.</div>`;
+    drawMap([],fit);return;
+  }
   drawMap(filteredHotels(),fit);renderMvList();fetchVisiblePrices();
 }
 function hiPin(id,on){const m=hmarkers[id];const el=m&&(m.getElement?m.getElement():m);if(el)el.classList.toggle("hot",on);}

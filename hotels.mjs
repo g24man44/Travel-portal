@@ -34,6 +34,8 @@ export default async (req) => {
   const headers = { "X-API-Key": key, accept: "application/json", "content-type": "application/json" };
   const hotels = [];
   let inventoryTruncated = false;
+  let inventoryRecords = 0;
+  let missingCoordinates = 0;
 
   // Fetch inventory in pages instead of stopping after the first 80 results.
   let offset = 0;
@@ -59,6 +61,7 @@ export default async (req) => {
     }
     const payload = await res.json();
     const page = Array.isArray(payload.data) ? payload.data : [];
+    inventoryRecords += page.length;
     // Some API responses may contain fewer rows than requested. Advance by
     // the actual page size instead of assuming a short page means we're done.
     let newlySeen = 0;
@@ -66,7 +69,7 @@ export default async (req) => {
       if (!h?.id || seenHotelIds.has(String(h.id))) continue;
       seenHotelIds.add(String(h.id));
       newlySeen++;
-      if (h.latitude == null || h.longitude == null) continue;
+      if (h.latitude == null || h.longitude == null) { missingCoordinates++; continue; }
       hotels.push({
         id: h.id,
         name: h.name || "Unnamed hotel",
@@ -158,6 +161,8 @@ export default async (req) => {
     city,
     country,
     total: hotels.length,
+    inventoryRecords,
+    missingCoordinates,
     inventoryLimit: MAX_HOTELS,
     inventoryTruncated,
     rateLookupFailed,
