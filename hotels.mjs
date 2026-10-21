@@ -36,7 +36,9 @@ export default async (req) => {
   let inventoryTruncated = false;
 
   // Fetch inventory in pages instead of stopping after the first 80 results.
-  for (let offset = 0; offset < MAX_HOTELS; offset += PAGE_SIZE) {
+  let offset = 0;
+  const seenHotelIds = new Set();
+  while (offset < MAX_HOTELS) {
     const params = new URLSearchParams({
       countryCode: country,
       cityName: city,
@@ -57,7 +59,13 @@ export default async (req) => {
     }
     const payload = await res.json();
     const page = Array.isArray(payload.data) ? payload.data : [];
+    // Some API responses may contain fewer rows than requested. Advance by
+    // the actual page size instead of assuming a short page means we're done.
+    let newlySeen = 0;
     for (const h of page) {
+      if (!h?.id || seenHotelIds.has(String(h.id))) continue;
+      seenHotelIds.add(String(h.id));
+      newlySeen++;
       if (h.latitude == null || h.longitude == null) continue;
       hotels.push({
         id: h.id,
@@ -72,8 +80,9 @@ export default async (req) => {
         priceStatus: checkin && checkout ? "not_checked" : "dates_required",
       });
     }
-    if (page.length < PAGE_SIZE) break;
-    if (offset + PAGE_SIZE >= MAX_HOTELS) inventoryTruncated = true;
+    if (page.length === 0 || newlySeen === 0) break;
+    offset += page.length;
+    if (offset >= MAX_HOTELS) inventoryTruncated = true;
   }
 
   // Price all retrieved hotels in small batches. Run only a few batches at once
