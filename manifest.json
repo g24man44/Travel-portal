@@ -1,0 +1,2 @@
+{"name":"10 — the card game","short_name":"10","description":"A multiplayer card game for friends. Get rid of your cards first.","id":"/","start_url":"/?app=1","scope":"/","display":"standalone","orientation":"portrait","background_color":"#0e1621","theme_color":"#0e1621","categories":["games","entertainment"],
+"icons":[{"src":"/icon-192.png?v=2","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"/icon-512.png?v=2","sizes":"512x512","type":"image/png","purpose":"any"},{"src":"/icon-maskable-512.png?v=2","sizes":"512x512","type":"image/png","purpose":"maskable"}]}
