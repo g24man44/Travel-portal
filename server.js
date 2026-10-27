@@ -203,11 +203,41 @@ const GQ=[
  ['What is the 4th Greg level called?',['Legend','Master','Boss','Shark'],1],
  ['Who is Greg named after?',['The guy who made this game','A famous card shark','A cat','A movie robot'],0],
  ['What does Greg want after you beat him once?',['A nap','Revenge','A hug','Tokens'],1]];
+// harder questions for the Grinch's stash (win back stolen tokens)
+const GQ2=[
+ ['How many cards does each player get in a full hand (face-down + face-up + hand)?',['15','17','19','21'],2],
+ ['How many tokens does a card swap cost?',['50','75','100','150'],2],
+ ['What rating does everyone start at in ranked?',['500','1000','1200','1500'],1],
+ ['How many seconds do you get per turn in Blitz?',['5','10','15','30'],1],
+ ['How long does a disconnected player get before a computer takes over?',['30 seconds','1 minute','2 minutes','5 minutes'],1],
+ ['What is the most players a game can have?',['4','6','8','10'],2],
+ ['What score does a ranked game play to?',['50','100','150','200'],1],
+ ['What score does a normal game play to by default?',['100','125','150','200'],2],
+ ['How many tokens is the 7-day streak bonus?',['20','50','75','100'],1],
+ ['How many streak freezes can you hold at once?',['1','2','3','5'],1],
+ ['What rating do you need to reach Diamond?',['1150','1200','1250','1350'],2],
+ ['How many placement matches before you get a rank?',['1','3','5','10'],1],
+ ['How many tokens do you get for a new badge?',['10','15','20','25'],2],
+ ['How many tokens does winning a game add on top of finishing it?',['10','15','25','50'],2],
+ ['How many tokens is a prediction bet when you watch a game?',['10','20','50','100'],1],
+ ['How many tokens does every new player start with?',['0','50','100','250'],2],
+ ['Which card is the lowest in the game?',['2','Ace','3','Joker'],1],
+ ['What happens if you play a card higher than the top card?',['It bounces back','You pick up the pile','You skip a turn','Nothing'],1],
+ ['How many face-down cards does each player get in quick hands?',['2','3','4','5'],1],
+ ['What is the most players a tournament can have?',['8','12','16','32'],2],
+ ['How many tokens does the daily challenge pay?',['10','15','20','25'],1],
+ ['How many tokens does a streak freeze cost?',['50','75','100','150'],1],
+ ['What is the 5th Greg level called?',['Master','Boss','Legend','Champion'],2],
+ ['What does a face-down 10 do even if you already played a 10 that turn?',['Nothing','It still counts and clears the pile','You pick up','It ends the game'],1],
+ ['How many decks are shuffled together in a 6-player game?',['1','2','3','4'],2]];
+const STASH_MIN=5;
 const grDay=()=>{const d=etDay();return{key:d,m:+d.slice(5,7),d:+d.slice(8,10)}};
 const grOpen=()=>{const D=grDay();return D.m===12&&D.d<=25};
 function grBank(){return[...((FU&&FU.gq)||[]).map(q=>[q.q,q.a,q.c]),...GQ]}
 function grQ(dayNum){const B=grBank();return B[(dayNum-1)%B.length]}
-function grinchHome(k){if(!grOpen())return null;const D=grDay(),x=(FU.x&&FU.x[k])||{},r=x.gr&&x.gr[D.key];return{day:D.d,done:!!r,ok:r?r.ok:null,score:Object.values(x.gr||{}).filter(v=>v.ok).length}}
+function grinchHome(k){if(!grOpen())return null;const D=grDay(),x=(FU.x&&FU.x[k])||{},r=x.gr&&x.gr[D.key];return{day:D.d,done:!!r,ok:r?r.ok:null,score:Object.values(x.gr||{}).filter(v=>v.ok).length,pot:FU.stash||0,shDone:!!(x.sh&&x.sh.d===D.key)}}
+const NFL=['ari','atl','bal','buf','car','chi','cin','cle','dal','den','det','gb','hou','ind','jax','kc','lv','lac','lar','mia','min','ne','no','nyg','nyj','phi','pit','sf','sea','tb','ten','was'];
+const SHOP=Object.fromEntries(NFL.map(t=>['fb-'+t,2000]));
 // ---- guided first game: finishing the tutorial once pays a welcome bonus ----
 const TUT_BONUS=50;
 function tutDone(R){const h=R.ps.find(q=>q.human&&!q.bot);if(!h)return;const k=pkey(h),x=tkX(k);if(!x||x.tut)return;x.tut=Date.now();tkAdd(k,TUT_BONUS);toast(R,h,`🎓 Tutorial complete! +${TUT_BONUS} tokens`);R.msg+=` Tutorial complete: +${TUT_BONUS} tokens!`;fuStore()}
@@ -929,8 +959,30 @@ http.createServer(async(req,res)=>{
     if(pv)return send(res,200,{ok,c:q[2],pick,delta:0,tk:x.tk,pv:true});
     x.gr=x.gr||{};if(x.gr[D.key])return send(res,200,{ok:x.gr[D.key].ok,c:q[2],pick:x.gr[D.key].pick,delta:0,tk:x.tk,again:true});
     const before=x.tk||0,delta=ok?GRINCH.win:-Math.min(before,GRINCH.steal);x.tk=before+delta;x.gr[D.key]={ok,pick,d:delta};
-    FU.grs=FU.grs||{};const st=FU.grs[D.key]||(FU.grs[D.key]={ok:0,bad:0});if(ok)st.ok++;else st.bad++;
+    FU.grs=FU.grs||{};const st=FU.grs[D.key]||(FU.grs[D.key]={ok:0,bad:0});if(ok)st.ok++;else st.bad++;if(delta<0)FU.stash=(FU.stash||0)-delta;
     if(ok)feedAdd(k,'outsmarted the Grinch today','🎄');fuStore();tkPing(k);return send(res,200,{ok,c:q[2],pick,delta,tk:x.tk})}
+  // ---- the Grinch's stash: every stolen token goes in. Once a day, wager up to the stash on a hard Greg question. Win: take that much out. Lose: your wager goes in. ----
+  if(req.method==='GET'&&u.pathname==='/api/stash'){await fuLoad();const usr=FU.u[String(u.searchParams.get('pid')||'')],k=usr&&usr.acct;if(!k)return send(res,401,{err:'Log in to play.'});
+    const pv=u.searchParams.get('pv')==='1',D=grDay(),x=(FU.x&&FU.x[k])||{},e=x.sh&&x.sh.d===D.key?x.sh:null,q=e?GQ2[e.qi]:null;
+    return send(res,200,{open:pv||grOpen(),pot:FU.stash||0,tk:x.tk==null?TK.start:x.tk,min:STASH_MIN,e:e?{w:e.w,done:e.r!=null,ok:e.r,pick:e.pick,q:q[0],a:q[1],c:e.r!=null?q[2]:null}:null,big:FU.stashBig||null})}
+  if(req.method==='POST'&&u.pathname==='/api/stash'){const b=await body(req);await fuLoad();const usr=FU.u[String(b.pid||'')],k=usr&&usr.acct,x=k&&tkX(k);if(!x)return send(res,401,{err:'Log in to play.'});
+    if(!fuOK)return send(res,503,{err:'Try again in a minute.'});const D=grDay();if(!grOpen())return send(res,400,{err:'The stash is only open December 1 to 25.'});
+    const e=x.sh&&x.sh.d===D.key?x.sh:null;
+    if(b.step==='bet'){if(e)return send(res,400,{err:'You already played the stash today. Come back tomorrow.'});const pot=FU.stash||0,w=Math.floor(+b.w||0);
+      if(pot<STASH_MIN)return send(res,400,{err:'The stash is empty right now.'});if(w<STASH_MIN)return send(res,400,{err:`Wager at least ${STASH_MIN} tokens.`});
+      if(w>pot)return send(res,400,{err:`You can wager at most ${pot} (what's in the stash).`});if(w>(x.tk||0))return send(res,400,{err:`You only have ${x.tk||0} tokens.`});
+      // the wager goes into the stash right away; a correct answer pays back double from it
+      const qi=(dayN(D.key)*7+[...k].reduce((a,c)=>a+c.charCodeAt(0),0))%GQ2.length;x.tk-=w;FU.stash=pot+w;x.sh={d:D.key,w,qi,r:null};fuStore();tkPing(k);
+      const q=GQ2[qi];return send(res,200,{q:q[0],a:q[1],w,tk:x.tk,pot:FU.stash})}
+    if(b.step==='answer'){if(!e||e.r!=null)return send(res,400,{err:'Place a wager first.'});const q=GQ2[e.qi],pick=b.pick|0,ok=pick===q[2];e.r=ok;e.pick=pick;
+      if(ok){const pay=Math.min(2*e.w,FU.stash||0);x.tk+=pay;FU.stash=(FU.stash||0)-pay;feedAdd(k,`won ${e.w} tokens back from the Grinch's stash`,'💰');if(!FU.stashBig||e.w>FU.stashBig.w)FU.stashBig={u:FU.a[k].u,w:e.w}}
+      fuStore();tkPing(k);return send(res,200,{ok,c:q[2],pick,w:e.w,tk:x.tk,pot:FU.stash})}
+    return send(res,400,{})}
+  // ---- football card backs: team colors by city, 2,000 tokens each ----
+  if(req.method==='POST'&&u.pathname==='/api/buyback'){const b=await body(req);await fuLoad();const usr=FU.u[String(b.pid||'')],k=usr&&usr.acct,x=k&&tkX(k);if(!x)return send(res,401,{err:'Log in first.'});
+    const id=String(b.id||'');if(!SHOP[id])return send(res,404,{err:'That card back is not in the shop.'});x.backs=x.backs||{};if(x.backs[id])return send(res,200,{owned:true,tk:x.tk});
+    if((x.tk||0)<SHOP[id])return send(res,400,{err:`That card back costs ${SHOP[id].toLocaleString()} tokens. You have ${x.tk||0}.`});
+    x.tk-=SHOP[id];x.backs[id]=Date.now();if(b.equip)x.back=id;fuStore();tkPing(k);feedAdd(k,'bought a new football card back','🏈');return send(res,200,{tk:x.tk,owned:true})}
   if(req.method==='POST'&&u.pathname==='/api/freeze'){
     const b=await body(req);await fuLoad();const usr=FU.u[String(b.pid||'')],k=usr&&usr.acct,x=k&&tkX(k);if(!x)return send(res,401,{err:'Log in first.'});
     const st=x.st||(x.st={d:'',n:0,best:0,fz:0});if((st.fz||0)>=FREEZE.max)return send(res,400,{err:`You can hold ${FREEZE.max} freezes at most.`});
@@ -1178,7 +1230,7 @@ ${showNames?`<h2>Games right now</h2>${Object.values(rooms).filter(R=>R.phase!==
 <h2>All time${out.allTime.since?' (since '+out.allTime.since+')':''}</h2><table>${row('Games started',started)}${row('Games finished',finished)}${row('Different players',all.size)}</table>
 <p><small>${out.saved==='cloud'?'✓ Totals saved to the cloud.':out.saved==='server'?'⚠️ Totals reset when the server restarts (Upstash not connected).':'⚠️ Cannot reach the database right now.'} Computer players are not counted. Players are counted by name.</small></p>`);
   }
-  if(req.method==='GET'&&u.pathname==='/api/ver')return send(res,200,{greg:'v61 streaks, ranked tiers, token stakes, guided first game, 10 Wrapped, Christmas Greg quiz, end-of-hand sound toggle, v60 suggested friends, v59 flipped four of a kind lets you choose to add, v57 friends last online, v56 Legend about 80 percent with a modest deal edge, fair Master, v52 short TV link, v51 party mode TV, ghost players, predictions, v50 weekly missions, blitz, ranked matchmaking, friend feed, Greg mood, seasonal card backs, v49 new app icon, iPhone emoji titles and badge count, v48 notification artwork, v47 cleaner notifications, v46 friend-online notifications, v45 admin watch button, v44 Legend boss luck, v43 rebuilt Greg ladder difficulty, v42 pick 1 of 3 swaps, admin give tokens, v41 token catch-up for existing players, v40 tokens and card swaps vs computers, v39 one 10 per turn, turn passes when only 10s are left, v37 featured badge, v36 friend profiles with badges, v35 1-minute disconnect countdown, v34 one 10 per turn, no computer stand-in when playing only bots, v33 games survive updates, cleaner home and lobby, v32 2v2 partners, big cards, vibration, 1v1, invite buttons, challenge Greg button, v31 tournaments, slow games, push notifications, coach, Greg ladder, trophies, share cards, admin pair friends, profiles required, unique names, no bot chat, admin watch with all cards, owner cannot be unfriended, auto-friend, everyone taps Next to deal, rejoin after leaving, away autoplay, change PIN and admin PIN reset, rematch, trash talk, achievements, rivalries, house rules, daily challenge, spectating, highlights, profile photos, profiles with usernames, friends list, stats page, safer leaderboard saving, prefers playing all its kings/queens/jacks together, season leaderboard, voice chat, text chat and reactions, saves 10s and aces',rolloutsPerSec:bench(),moves:GS.moves,avgDeepRounds:GS.moves?+(GS.rounds/GS.moves).toFixed(2):0,avgStage1Ms:GS.moves?Math.round(GS.stage1ms/GS.moves):0,avgTotalMs:GS.moves?Math.round(GS.totalms/GS.moves):0,avgOptions:GS.moves?+(GS.cands/GS.moves).toFixed(1):0,node:process.version});
+  if(req.method==='GET'&&u.pathname==='/api/ver')return send(res,200,{greg:'v62 Grinch stash, football card backs with logos, v61 streaks, ranked tiers, token stakes, guided first game, 10 Wrapped, Christmas Greg quiz, end-of-hand sound toggle, v60 suggested friends, v59 flipped four of a kind lets you choose to add, v57 friends last online, v56 Legend about 80 percent with a modest deal edge, fair Master, v52 short TV link, v51 party mode TV, ghost players, predictions, v50 weekly missions, blitz, ranked matchmaking, friend feed, Greg mood, seasonal card backs, v49 new app icon, iPhone emoji titles and badge count, v48 notification artwork, v47 cleaner notifications, v46 friend-online notifications, v45 admin watch button, v44 Legend boss luck, v43 rebuilt Greg ladder difficulty, v42 pick 1 of 3 swaps, admin give tokens, v41 token catch-up for existing players, v40 tokens and card swaps vs computers, v39 one 10 per turn, turn passes when only 10s are left, v37 featured badge, v36 friend profiles with badges, v35 1-minute disconnect countdown, v34 one 10 per turn, no computer stand-in when playing only bots, v33 games survive updates, cleaner home and lobby, v32 2v2 partners, big cards, vibration, 1v1, invite buttons, challenge Greg button, v31 tournaments, slow games, push notifications, coach, Greg ladder, trophies, share cards, admin pair friends, profiles required, unique names, no bot chat, admin watch with all cards, owner cannot be unfriended, auto-friend, everyone taps Next to deal, rejoin after leaving, away autoplay, change PIN and admin PIN reset, rematch, trash talk, achievements, rivalries, house rules, daily challenge, spectating, highlights, profile photos, profiles with usernames, friends list, stats page, safer leaderboard saving, prefers playing all its kings/queens/jacks together, season leaderboard, voice chat, text chat and reactions, saves 10s and aces',rolloutsPerSec:bench(),moves:GS.moves,avgDeepRounds:GS.moves?+(GS.rounds/GS.moves).toFixed(2):0,avgStage1Ms:GS.moves?Math.round(GS.stage1ms/GS.moves):0,avgTotalMs:GS.moves?Math.round(GS.totalms/GS.moves):0,avgOptions:GS.moves?+(GS.cands/GS.moves).toFixed(1):0,node:process.version});
   if(req.method==='POST'&&u.pathname==='/api/pstatus'){
     const b=await body(req),code=gcode(b.group),m=groups[code]&&groups[code].get(String(b.pid||''));
     if(!m)return send(res,404,{});
